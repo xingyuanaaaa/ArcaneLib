@@ -18,7 +18,7 @@ HEADERS = {
 
 # 需要上传的文件（排除不需要的）
 EXCLUDE_DIRS = {'__pycache__', '.git', 'data', 'static/uploads'}
-EXCLUDE_FILES = {'seed_data.py', 'tunnel.py', '.gitkeep', 'test_token.py', 'test_token2.py', 'test_token3.py'}
+EXCLUDE_FILES = {'seed_data.py', 'tunnel.py', '.gitkeep', 'test_token.py', 'test_token2.py', 'test_token3.py', 'check_repo.py', 'ngrok.exe'}
 
 def api_call(method, url, data=None):
     """调用 GitHub API"""

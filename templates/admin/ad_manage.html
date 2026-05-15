@@ -1,0 +1,403 @@
+{% extends "base.html" %}
+{% block title %}广告管理 - 管理后台 - {{ site_name }}{% endblock %}
+{% block head_extra %}
+<style>
+    .admin-layout { display: flex; min-height: calc(100vh - var(--header-h)); padding-top: var(--header-h); }
+    .admin-sidebar { width: 220px; min-width: 220px; background: rgba(10, 10, 22, 0.92); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-right: 1px solid var(--glass-border); padding: 16px 0; position: fixed; top: var(--header-h); left: 0; bottom: 0; z-index: 900; overflow-y: auto; }
+    .admin-sidebar .sidebar-logo { font-family: var(--font-display); font-size: 1rem; font-weight: 700; color: var(--gold); padding: 0 18px 12px; margin-bottom: 6px; border-bottom: 1px solid var(--glass-border); letter-spacing: 2px; text-shadow: 0 0 14px var(--gold-glow); }
+    .admin-sidebar nav { display: flex; flex-direction: column; gap: 1px; padding: 0 8px; }
+    .admin-sidebar nav a { display: block; padding: 9px 14px; color: var(--text-secondary); text-decoration: none; font-size: 0.82rem; border-radius: var(--radius-sm); transition: all 0.25s; font-weight: 500; font-family: var(--font-ui); }
+    .admin-sidebar nav a:hover { background: var(--glass-hover); color: var(--text-gold); }
+    .admin-sidebar nav a.active { background: var(--glass-hover); color: var(--gold); font-weight: 600; border-left: 2px solid var(--gold); }
+    .admin-sidebar nav a.return-link { color: var(--text-muted); margin-top: 6px; border-top: 1px solid var(--glass-border); padding-top: 12px; font-size: 0.76rem; }
+    .admin-sidebar nav a.return-link:hover { color: var(--gold); }
+    .admin-main { flex: 1; margin-left: 220px; padding: 24px 28px; min-height: calc(100vh - var(--header-h)); }
+    .admin-table { background: var(--glass-card); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border: 1px solid var(--glass-border); border-radius: var(--radius-md); overflow: hidden; margin-bottom: 20px; }
+    .admin-table table { width: 100%; border-collapse: collapse; }
+    .admin-table thead th { font-family: var(--font-display); font-size: 0.68rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1.5px; padding: 12px 14px; text-align: left; border-bottom: 1px solid var(--glass-border); background: rgba(0, 0, 0, 0.15); }
+    .admin-table tbody td { padding: 11px 14px; font-size: 0.84rem; color: var(--text-primary); border-bottom: 1px solid rgba(255, 255, 255, 0.03); font-family: var(--font-ui); }
+    .admin-table tbody tr:hover { background: var(--glass-hover); }
+    .admin-table tbody tr:last-child td { border-bottom: none; }
+    .page-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
+    .page-header h2 { font-family: var(--font-display); font-size: 1.2rem; font-weight: 700; color: var(--text-gold); letter-spacing: 1px; }
+    .badge-lime { background: rgba(20,184,166,0.12); color: var(--arcane-teal); border: 1px solid rgba(20,184,166,0.2); }
+    .badge-magenta { background: rgba(155,44,44,0.12); color: #e88181; border: 1px solid rgba(155,44,44,0.2); }
+    .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 2000; background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; }
+    .modal-box { background: var(--glass-bg); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); border: 1px solid var(--glass-border); border-radius: var(--radius-lg); padding: 24px; width: 90%; max-width: 560px; max-height: 85vh; overflow-y: auto; }
+    .modal-box h3 { font-family: var(--font-display); font-size: 1rem; font-weight: 600; color: var(--gold); margin-bottom: 18px; letter-spacing: 1px; }
+    .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--glass-border); }
+
+    .ad-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; margin-bottom: 20px; }
+    .ad-card {
+        background: var(--glass-card);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid var(--glass-border);
+        border-radius: var(--radius-md);
+        overflow: hidden;
+        transition: all 0.3s ease;
+    }
+    .ad-card:hover { border-color: rgba(201,160,80,0.2); transform: translateY(-2px); }
+    .ad-card-image {
+        width: 100%;
+        height: 140px;
+        background: rgba(0,0,0,0.2);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+    }
+    .ad-card-image img { width: 100%; height: 100%; object-fit: cover; }
+    .ad-card-image .ad-no-image { font-size: 2.2rem; opacity: 0.3; }
+    .ad-card-body { padding: 14px 16px; }
+    .ad-card-title { font-family: var(--font-display); font-size: 0.92rem; font-weight: 600; color: var(--text-primary); margin-bottom: 6px; }
+    .ad-card-meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 8px; }
+    .ad-card-meta .position-tag {
+        font-size: 0.66rem;
+        padding: 2px 8px;
+        border-radius: 10px;
+        background: rgba(201,160,80,0.1);
+        color: var(--gold);
+        border: 1px solid rgba(201,160,80,0.15);
+        font-family: var(--font-ui);
+        letter-spacing: 0.5px;
+    }
+    .ad-card-meta .type-tag {
+        font-size: 0.66rem;
+        padding: 2px 8px;
+        border-radius: 10px;
+        background: rgba(124,58,237,0.1);
+        color: #a78bfa;
+        border: 1px solid rgba(124,58,237,0.15);
+        font-family: var(--font-ui);
+    }
+    .ad-card-stats { display: flex; gap: 14px; font-size: 0.72rem; color: var(--text-muted); margin-bottom: 10px; font-family: var(--font-ui); }
+    .ad-card-stats span { display: flex; align-items: center; gap: 4px; }
+    .ad-card-actions { display: flex; gap: 6px; padding-top: 10px; border-top: 1px solid var(--glass-border); }
+
+    .img-preview-box {
+        margin-top: 8px;
+        width: 100%;
+        height: 100px;
+        background: rgba(0,0,0,0.2);
+        border-radius: var(--radius-sm);
+        border: 1px solid var(--glass-border);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        display: none;
+    }
+    .img-preview-box img { width: 100%; height: 100%; object-fit: contain; }
+    .img-preview-box .img-preview-placeholder { font-size: 0.74rem; color: var(--text-muted); }
+
+    .pos-options { display: flex; flex-wrap: wrap; gap: 6px; }
+    .pos-option {
+        padding: 6px 14px;
+        border-radius: 16px;
+        font-size: 0.76rem;
+        cursor: pointer;
+        border: 1px solid var(--glass-border);
+        background: transparent;
+        color: var(--text-secondary);
+        font-family: var(--font-ui);
+        transition: all 0.2s;
+    }
+    .pos-option:hover { border-color: var(--gold); color: var(--text-gold); }
+    .pos-option.selected { background: rgba(201,160,80,0.12); border-color: var(--gold); color: var(--gold); }
+
+    @media (max-width: 768px) {
+        .admin-sidebar { position: fixed; top: auto; bottom: 0; left: 0; right: 0; width: 100%; min-width: 100%; height: auto; padding: 0; border-right: none; border-top: 1px solid var(--glass-border); overflow-x: auto; overflow-y: hidden; z-index: 950; }
+        .admin-sidebar .sidebar-logo { display: none; }
+        .admin-sidebar nav { flex-direction: row; padding: 6px 10px; gap: 3px; white-space: nowrap; flex-wrap: nowrap; }
+        .admin-sidebar nav a { padding: 7px 12px; font-size: 0.72rem; border-radius: 16px; flex-shrink: 0; }
+        .admin-sidebar nav a.active { border-left: none; border: 1px solid var(--gold); }
+        .admin-sidebar nav a.return-link { border-top: none; margin-top: 0; padding-top: 7px; margin-left: 4px; }
+        .admin-main { margin-left: 0; padding: 16px 14px 90px; }
+        .ad-grid { grid-template-columns: 1fr; }
+    }
+</style>
+{% endblock %}
+{% block content %}
+<div class="admin-layout">
+    <aside class="admin-sidebar">
+        <div class="sidebar-logo">{{ site_name }}</div>
+        <nav>
+            <a href="{{ url_for('admin.dashboard') }}">仪表盘</a>
+            <a href="{{ url_for('admin.software_manage') }}">软件管理</a>
+            <a href="{{ url_for('admin.category_manage') }}">分类管理</a>
+            <a href="{{ url_for('admin.user_manage') }}">用户管理</a>
+            <a href="{{ url_for('admin.card_manage') }}">邀请码管理</a>
+            <a href="{{ url_for('admin.announcement_manage') }}">公告管理</a>
+            <a href="{{ url_for('admin.feedback_manage') }}">反馈管理</a>
+            <a href="{{ url_for('admin.ad_manage') }}" class="active">广告管理</a>
+            <a href="{{ url_for('admin.download_stats') }}">下载统计</a>
+            <a href="{{ url_for('admin.settings') }}">系统设置</a>
+            <a href="{{ url_for('main.index') }}" class="return-link">返回前台</a>
+        </nav>
+    </aside>
+    <div class="admin-main">
+        <div class="page-header">
+            <h2>广告管理</h2>
+            <button class="btn btn-primary" onclick="openAdModal()">添加广告</button>
+        </div>
+        {% if ads %}
+        <div class="ad-grid">
+            {% for ad in ads %}
+            <div class="ad-card">
+                <div class="ad-card-image">
+                    {% if ad.image_url %}
+                    <img src="{{ ad.image_url }}" alt="{{ ad.name }}" onerror="this.parentElement.innerHTML='<span class=ad-no-image>&#128247;</span>'">
+                    {% else %}
+                    <span class="ad-no-image">&#128247;</span>
+                    {% endif %}
+                </div>
+                <div class="ad-card-body">
+                    <div class="ad-card-title">{{ ad.name }}</div>
+                    <div class="ad-card-meta">
+                        <span class="position-tag">{{ ad.position }}</span>
+                        <span class="type-tag">{{ ad.ad_type or 'image' }}</span>
+                        {% if ad.is_active %}
+                        <span class="badge badge-lime">启用</span>
+                        {% else %}
+                        <span class="badge badge-magenta">禁用</span>
+                        {% endif %}
+                    </div>
+                    <div class="ad-card-stats">
+                        <span>&#128065; {{ ad.view_count or 0 }}</span>
+                        <span>&#128070; {{ ad.click_count or 0 }}</span>
+                    </div>
+                    <div class="ad-card-actions">
+                        <button class="btn btn-sm btn-primary" onclick="openAdModal({{ ad.id }})">编辑</button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteAd({{ ad.id }}, '{{ ad.name }}')">删除</button>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-label">暂无广告</div>
+            <p>点击上方"添加广告"按钮创建第一个广告</p>
+        </div>
+        {% endif %}
+        {% if total_pages and total_pages > 1 %}
+        <div class="pagination">
+            {% if page > 1 %}
+            <a href="{{ url_for('admin.ad_manage', page=page-1) }}">上一页</a>
+            {% endif %}
+            {% for p in range(1, total_pages + 1) %}
+            <a href="{{ url_for('admin.ad_manage', page=p) }}" class="{% if p == page %}active{% endif %}">{{ p }}</a>
+            {% endfor %}
+            {% if page < total_pages %}
+            <a href="{{ url_for('admin.ad_manage', page=page+1) }}">下一页</a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+<div class="modal-overlay" id="adModal" style="display: none;">
+    <div class="modal-box">
+        <h3 id="adModalTitle">添加广告</h3>
+        <form id="adForm" novalidate>
+            <input type="hidden" id="editAdId" value="">
+            <div class="form-group">
+                <label class="form-label" for="adName">广告名称</label>
+                <input type="text" id="adName" class="form-input" placeholder="请输入广告名称" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label">广告位置</label>
+                <div class="pos-options" id="adPositionGroup">
+                    <span class="pos-option selected" data-pos="home_top">首页顶部</span>
+                    <span class="pos-option" data-pos="home_bottom">首页底部</span>
+                    <span class="pos-option" data-pos="detail_top">详情页顶部</span>
+                    <span class="pos-option" data-pos="detail_bottom">详情页底部</span>
+                    <span class="pos-option" data-pos="sidebar">侧边栏</span>
+                    <span class="pos-option" data-pos="popup">弹窗</span>
+                </div>
+                <input type="hidden" id="adPosition" value="home_top">
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="adType">广告类型</label>
+                <select id="adType" class="form-select">
+                    <option value="image">图片</option>
+                    <option value="text">文字</option>
+                    <option value="html">HTML代码</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="adImageUrl">图片URL</label>
+                <input type="text" id="adImageUrl" class="form-input" placeholder="请输入图片链接地址">
+                <div class="img-preview-box" id="imgPreviewBox">
+                    <img id="imgPreview" src="" alt="预览">
+                    <span class="img-preview-placeholder" id="imgPreviewPlaceholder">图片预览</span>
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="adLinkUrl">跳转链接</label>
+                <input type="text" id="adLinkUrl" class="form-input" placeholder="请输入点击跳转链接">
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="adTitle">广告标题</label>
+                <input type="text" id="adTitle" class="form-input" placeholder="请输入广告标题">
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="adDescription">广告描述</label>
+                <textarea id="adDescription" class="form-textarea" placeholder="请输入广告描述" rows="2"></textarea>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="adSortOrder">排序</label>
+                <input type="number" id="adSortOrder" class="form-input" value="0" min="0">
+            </div>
+            <div class="form-group" id="adIsActiveGroup" style="display: none;">
+                <label style="display: flex; align-items: center; gap: 6px; font-size: 0.84rem; cursor: pointer; color: var(--text-primary); font-family: var(--font-ui);">
+                    <input type="checkbox" id="adIsActive" value="1" checked style="accent-color: var(--gold);"> 启用
+                </label>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-outline" onclick="closeAdModal()">取消</button>
+                <button type="submit" class="btn btn-primary" id="adSubmitBtn">保存</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+(function() {
+    var adModal = document.getElementById('adModal');
+    var adForm = document.getElementById('adForm');
+    var modalTitle = document.getElementById('adModalTitle');
+    var editId = document.getElementById('editAdId');
+    var submitBtn = document.getElementById('adSubmitBtn');
+    var imgPreviewBox = document.getElementById('imgPreviewBox');
+    var imgPreview = document.getElementById('imgPreview');
+    var imgPreviewPlaceholder = document.getElementById('imgPreviewPlaceholder');
+
+    var posOptions = document.querySelectorAll('#adPositionGroup .pos-option');
+    var adPositionInput = document.getElementById('adPosition');
+
+    posOptions.forEach(function(opt) {
+        opt.addEventListener('click', function() {
+            posOptions.forEach(function(o) { o.classList.remove('selected'); });
+            opt.classList.add('selected');
+            adPositionInput.value = opt.getAttribute('data-pos');
+        });
+    });
+
+    var adImageUrlInput = document.getElementById('adImageUrl');
+    adImageUrlInput.addEventListener('input', function() {
+        var url = adImageUrlInput.value.trim();
+        if (url) {
+            imgPreviewBox.style.display = 'flex';
+            imgPreview.src = url;
+            imgPreview.style.display = 'block';
+            imgPreviewPlaceholder.style.display = 'none';
+        } else {
+            imgPreviewBox.style.display = 'none';
+            imgPreview.style.display = 'none';
+            imgPreviewPlaceholder.style.display = 'block';
+        }
+    });
+    adImageUrlInput.addEventListener('blur', function() {
+        if (!adImageUrlInput.value.trim()) {
+            imgPreviewBox.style.display = 'none';
+        }
+    });
+
+    function setPositionUI(pos) {
+        posOptions.forEach(function(o) {
+            if (o.getAttribute('data-pos') === pos) {
+                o.classList.add('selected');
+            } else {
+                o.classList.remove('selected');
+            }
+        });
+        adPositionInput.value = pos || 'home_top';
+    }
+
+    window.openAdModal = function(adId) {
+        adForm.reset();
+        editId.value = '';
+        document.getElementById('adIsActiveGroup').style.display = 'none';
+        imgPreviewBox.style.display = 'none';
+        setPositionUI('home_top');
+
+        if (adId) {
+            modalTitle.textContent = '编辑广告';
+            document.getElementById('adIsActiveGroup').style.display = 'block';
+            editId.value = adId;
+            submitBtn.textContent = '更新';
+
+            API.get('/admin/api/ad/detail/' + adId).then(function(res) {
+                if (res.success && res.data) {
+                    var ad = res.data;
+                    document.getElementById('adName').value = ad.name || '';
+                    setPositionUI(ad.position || 'home_top');
+                    document.getElementById('adType').value = ad.ad_type || 'image';
+                    document.getElementById('adImageUrl').value = ad.image_url || '';
+                    if (ad.image_url) {
+                        imgPreviewBox.style.display = 'flex';
+                        imgPreview.src = ad.image_url;
+                        imgPreview.style.display = 'block';
+                        imgPreviewPlaceholder.style.display = 'none';
+                    }
+                    document.getElementById('adLinkUrl').value = ad.link_url || '';
+                    document.getElementById('adTitle').value = ad.title || '';
+                    document.getElementById('adDescription').value = ad.description || '';
+                    document.getElementById('adSortOrder').value = ad.sort_order || 0;
+                    document.getElementById('adIsActive').checked = ad.is_active == 1;
+                } else {
+                    Toast.error('获取广告数据失败');
+                    closeAdModal();
+                }
+            }).catch(function() {
+                Toast.error('网络错误');
+                closeAdModal();
+            });
+        } else {
+            modalTitle.textContent = '添加广告';
+            submitBtn.textContent = '保存';
+        }
+        adModal.style.display = 'flex';
+    };
+
+    window.closeAdModal = function() { adModal.style.display = 'none'; adForm.reset(); editId.value = ''; imgPreviewBox.style.display = 'none'; };
+    adModal.addEventListener('click', function(e) { if (e.target === adModal) closeAdModal(); });
+
+    adForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        var name = document.getElementById('adName').value.trim();
+        if (!name) { Toast.warning('请输入广告名称'); return; }
+        var data = {
+            name: name,
+            position: document.getElementById('adPosition').value,
+            ad_type: document.getElementById('adType').value,
+            image_url: document.getElementById('adImageUrl').value.trim(),
+            link_url: document.getElementById('adLinkUrl').value.trim(),
+            title: document.getElementById('adTitle').value.trim(),
+            description: document.getElementById('adDescription').value.trim(),
+            sort_order: parseInt(document.getElementById('adSortOrder').value) || 0
+        };
+        var id = editId.value;
+        var url = id ? '/admin/api/ad/edit/' + id : '/admin/api/ad/add';
+        if (id) { data.is_active = document.getElementById('adIsActive').checked ? 1 : 0; }
+        submitBtn.disabled = true; submitBtn.textContent = '保存中...';
+        API.post(url, data).then(function(res) {
+            if (res.success) { Toast.success(res.message || '操作成功'); closeAdModal(); setTimeout(function() { window.location.reload(); }, 500); }
+            else { Toast.error(res.message || '操作失败'); }
+            submitBtn.disabled = false; submitBtn.textContent = id ? '更新' : '保存';
+        }).catch(function() { Toast.error('网络错误'); submitBtn.disabled = false; submitBtn.textContent = id ? '更新' : '保存'; });
+    });
+
+    window.deleteAd = function(adId, adName) {
+        Modal.confirm('删除广告', '确定要删除广告 "' + adName + '" 吗？', function() {
+            API.post('/admin/api/ad/delete/' + adId, {}).then(function(res) {
+                if (res.success) { Toast.success(res.message || '广告已删除'); setTimeout(function() { window.location.reload(); }, 500); }
+                else { Toast.error(res.message || '删除失败'); }
+            }).catch(function() { Toast.error('网络错误'); });
+        });
+    };
+})();
+</script>
+{% endblock %}

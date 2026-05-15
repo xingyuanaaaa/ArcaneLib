@@ -1,0 +1,364 @@
+{% extends "base.html" %}
+{% block title %}邀请码管理 - 管理后台 - {{ site_name }}{% endblock %}
+{% block head_extra %}
+<style>
+    .admin-layout { display: flex; min-height: calc(100vh - var(--header-h)); padding-top: var(--header-h); }
+    .admin-sidebar { width: 220px; min-width: 220px; background: rgba(10, 10, 22, 0.92); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-right: 1px solid var(--glass-border); padding: 16px 0; position: fixed; top: var(--header-h); left: 0; bottom: 0; z-index: 900; overflow-y: auto; }
+    .admin-sidebar .sidebar-logo { font-family: var(--font-display); font-size: 1rem; font-weight: 700; color: var(--gold); padding: 0 18px 12px; margin-bottom: 6px; border-bottom: 1px solid var(--glass-border); letter-spacing: 2px; text-shadow: 0 0 14px var(--gold-glow); }
+    .admin-sidebar nav { display: flex; flex-direction: column; gap: 1px; padding: 0 8px; }
+    .admin-sidebar nav a { display: block; padding: 9px 14px; color: var(--text-secondary); text-decoration: none; font-size: 0.82rem; border-radius: var(--radius-sm); transition: all 0.25s; font-weight: 500; font-family: var(--font-ui); }
+    .admin-sidebar nav a:hover { background: var(--glass-hover); color: var(--text-gold); }
+    .admin-sidebar nav a.active { background: var(--glass-hover); color: var(--gold); font-weight: 600; border-left: 2px solid var(--gold); }
+    .admin-sidebar nav a.return-link { color: var(--text-muted); margin-top: 6px; border-top: 1px solid var(--glass-border); padding-top: 12px; font-size: 0.76rem; }
+    .admin-sidebar nav a.return-link:hover { color: var(--gold); }
+    .admin-main { flex: 1; margin-left: 220px; padding: 24px 28px; min-height: calc(100vh - var(--header-h)); }
+    .admin-table { background: var(--glass-card); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border: 1px solid var(--glass-border); border-radius: var(--radius-md); overflow: hidden; margin-bottom: 20px; }
+    .admin-table table { width: 100%; border-collapse: collapse; }
+    .admin-table thead th { font-family: var(--font-display); font-size: 0.68rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1.5px; padding: 12px 14px; text-align: left; border-bottom: 1px solid var(--glass-border); background: rgba(0, 0, 0, 0.15); }
+    .admin-table tbody td { padding: 11px 14px; font-size: 0.84rem; color: var(--text-primary); border-bottom: 1px solid rgba(255, 255, 255, 0.03); font-family: var(--font-ui); }
+    .admin-table tbody tr:hover { background: var(--glass-hover); }
+    .admin-table tbody tr:last-child td { border-bottom: none; }
+    .page-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
+    .page-header h2 { font-family: var(--font-display); font-size: 1.2rem; font-weight: 700; color: var(--text-gold); letter-spacing: 1px; }
+    .card-key { font-family: 'Courier New', monospace; font-size: 0.76rem; }
+    .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 2000; background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; }
+    .modal-box { background: var(--glass-bg); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); border: 1px solid var(--glass-border); border-radius: var(--radius-lg); padding: 24px; width: 90%; max-width: 560px; max-height: 85vh; overflow-y: auto; }
+    .modal-box h3 { font-family: var(--font-display); font-size: 1rem; font-weight: 600; color: var(--gold); margin-bottom: 18px; letter-spacing: 1px; }
+    .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--glass-border); }
+    .stat-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+    .stat-card { background: var(--glass-card); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid var(--glass-border); border-radius: var(--radius-md); padding: 18px; transition: all 0.3s; cursor: default; }
+    .stat-card:hover { transform: translateY(-2px); }
+    .stat-card .stat-value { font-size: 1.6rem; font-weight: 700; font-family: var(--font-display); }
+    .stat-card .stat-label { font-size: 0.74rem; color: var(--text-muted); margin-top: 2px; font-family: var(--font-ui); }
+    .stat-card.stat-teal { border-color: rgba(20, 184, 166, 0.25); }
+    .stat-card.stat-teal .stat-value { color: var(--arcane-teal); text-shadow: 0 0 12px rgba(20, 184, 166, 0.3); }
+    .stat-card.stat-teal .stat-icon { color: var(--arcane-teal); }
+    .stat-card.stat-gold { border-color: rgba(201, 160, 80, 0.25); }
+    .stat-card.stat-gold .stat-value { color: var(--gold); text-shadow: 0 0 12px var(--gold-glow); }
+    .stat-card.stat-gold .stat-icon { color: var(--gold); }
+    .stat-card.stat-muted { border-color: rgba(255, 255, 255, 0.06); }
+    .stat-card.stat-muted .stat-value { color: var(--text-muted); }
+    .stat-card.stat-muted .stat-icon { color: var(--text-muted); }
+    .stat-card .stat-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+    .stat-card .stat-icon { font-size: 1.1rem; }
+    .badge-status { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.5px; font-family: var(--font-ui); }
+    .badge-status.unused { background: rgba(20, 184, 166, 0.1); color: var(--arcane-teal); border: 1px solid rgba(20, 184, 166, 0.2); }
+    .badge-status.used { background: rgba(201, 160, 80, 0.1); color: var(--gold); border: 1px solid rgba(201, 160, 80, 0.2); }
+    .badge-status.disabled { background: rgba(255, 255, 255, 0.04); color: var(--text-muted); border: 1px solid rgba(255, 255, 255, 0.08); }
+    .badge-type-vip { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 0.72rem; font-weight: 600; background: linear-gradient(135deg, rgba(201, 160, 80, 0.1), rgba(124, 58, 237, 0.06)); border: 1px solid rgba(201, 160, 80, 0.2); color: var(--gold); font-family: var(--font-ui); }
+    .badge-type-points { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 0.72rem; font-weight: 600; background: rgba(124, 58, 237, 0.1); color: #a78bfa; border: 1px solid rgba(124, 58, 237, 0.2); font-family: var(--font-ui); }
+    .badge-type-register { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 0.72rem; font-weight: 600; background: rgba(20, 184, 166, 0.1); color: var(--arcane-teal); border: 1px solid rgba(20, 184, 166, 0.2); font-family: var(--font-ui); }
+    .range-group { display: flex; align-items: center; gap: 10px; }
+    .range-group input[type="range"] { flex: 1; accent-color: var(--gold); height: 6px; }
+    .range-group .range-val { min-width: 48px; text-align: center; font-size: 0.9rem; font-weight: 700; color: var(--gold); font-family: var(--font-display); }
+    .generated-result { background: rgba(201, 160, 80, 0.03); border: 1px solid var(--gold); border-radius: var(--radius-md); padding: 16px; margin-top: 12px; }
+    .generated-result .gr-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+    .generated-result .gr-header .gr-title { font-size: 0.78rem; font-weight: 600; color: var(--gold); font-family: var(--font-ui); }
+    .generated-cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 6px; max-height: 240px; overflow-y: auto; }
+    .generated-card-item { background: rgba(201, 160, 80, 0.04); border: 1px solid rgba(201, 160, 80, 0.1); border-radius: var(--radius-sm); padding: 8px 10px; font-family: 'Courier New', monospace; font-size: 0.76rem; color: var(--text-primary); display: flex; align-items: center; gap: 6px; transition: all 0.2s; }
+    .generated-card-item:hover { border-color: var(--gold); background: rgba(201, 160, 80, 0.08); }
+    .generated-card-item .gc-num { color: var(--text-muted); font-size: 0.66rem; min-width: 20px; }
+    .generated-card-item .gc-key { word-break: break-all; }
+    @media (max-width: 768px) {
+        .admin-sidebar { position: fixed; top: auto; bottom: 0; left: 0; right: 0; width: 100%; min-width: 100%; height: auto; padding: 0; border-right: none; border-top: 1px solid var(--glass-border); overflow-x: auto; overflow-y: hidden; z-index: 950; }
+        .admin-sidebar .sidebar-logo { display: none; }
+        .admin-sidebar nav { flex-direction: row; padding: 6px 10px; gap: 3px; white-space: nowrap; flex-wrap: nowrap; }
+        .admin-sidebar nav a { padding: 7px 12px; font-size: 0.72rem; border-radius: 16px; flex-shrink: 0; }
+        .admin-sidebar nav a.active { border-left: none; border: 1px solid var(--gold); }
+        .admin-sidebar nav a.return-link { border-top: none; margin-top: 0; padding-top: 7px; margin-left: 4px; }
+        .admin-main { margin-left: 0; padding: 16px 14px 90px; }
+        .stat-cards { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+        .stat-card { padding: 12px; }
+        .stat-card .stat-value { font-size: 1.2rem; }
+        .generated-cards-grid { grid-template-columns: 1fr; }
+    }
+</style>
+{% endblock %}
+{% block content %}
+<div class="admin-layout">
+    <aside class="admin-sidebar">
+        <div class="sidebar-logo">{{ site_name }}</div>
+        <nav>
+            <a href="{{ url_for('admin.dashboard') }}">仪表盘</a>
+            <a href="{{ url_for('admin.software_manage') }}">软件管理</a>
+            <a href="{{ url_for('admin.category_manage') }}">分类管理</a>
+            <a href="{{ url_for('admin.user_manage') }}">用户管理</a>
+            <a href="{{ url_for('admin.card_manage') }}" class="active">邀请码管理</a>
+            <a href="{{ url_for('admin.announcement_manage') }}">公告管理</a>
+            <a href="{{ url_for('admin.feedback_manage') }}">反馈管理</a>
+            <a href="{{ url_for('admin.ad_manage') }}">广告管理</a>
+            <a href="{{ url_for('admin.download_stats') }}">下载统计</a>
+            <a href="{{ url_for('admin.settings') }}">系统设置</a>
+            <a href="{{ url_for('main.index') }}" class="return-link">返回前台</a>
+        </nav>
+    </aside>
+    <div class="admin-main">
+        <div class="page-header">
+            <h2>邀请码管理</h2>
+            <button class="btn btn-primary" onclick="openCardGenerateModal()">生成邀请码</button>
+        </div>
+        <div class="stat-cards">
+            <div class="stat-card stat-teal">
+                <div class="stat-header">
+                    <span class="stat-icon">&#9672;</span>
+                    <span class="stat-label">注册邀请码(未使用)</span>
+                </div>
+                <div class="stat-value">{{ register_unused_count }}</div>
+            </div>
+            <div class="stat-card stat-gold">
+                <div class="stat-header">
+                    <span class="stat-icon">&#9679;</span>
+                    <span class="stat-label">VIP邀请码(未使用)</span>
+                </div>
+                <div class="stat-value">{{ vip_unused_count }}</div>
+            </div>
+            <div class="stat-card stat-muted">
+                <div class="stat-header">
+                    <span class="stat-icon">&#9678;</span>
+                    <span class="stat-label">积分邀请码(未使用)</span>
+                </div>
+                <div class="stat-value">{{ points_unused_count }}</div>
+            </div>
+            <div class="stat-card stat-gold">
+                <div class="stat-header">
+                    <span class="stat-icon">&#9670;</span>
+                    <span class="stat-label">已使用总数</span>
+                </div>
+                <div class="stat-value">{{ used_count }}</div>
+            </div>
+        </div>
+        <div class="admin-table">
+            <table>
+                <thead>
+                    <tr>
+                        <th>邀请码</th>
+                        <th>类型</th>
+                        <th>状态</th>
+                        <th>使用者</th>
+                        <th>生成时间</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if cards %}
+                    {% for card in cards %}
+                    <tr>
+                        <td class="card-key">{{ card.card_key }}</td>
+                        <td>
+                            {% if card.card_type == 'vip' %}
+                            <span class="badge-type-vip">VIP {{ card.vip_days }}天</span>
+                            {% elif card.card_type == 'register' %}
+                            <span class="badge-type-register">注册</span>
+                            {% else %}
+                            <span class="badge-type-points">{{ card.points }}积分</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if card.status == 'unused' %}
+                            <span class="badge-status unused">未使用</span>
+                            {% elif card.status == 'used' %}
+                            <span class="badge-status used">已使用</span>
+                            {% else %}
+                            <span class="badge-status disabled">已禁用</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ card.used_username or '-' }}</td>
+                        <td>{{ card.created_at }}</td>
+                        <td>
+                            {% if card.status == 'unused' %}
+                            <button class="btn btn-sm btn-outline" onclick="disableCard({{ card.id }})">禁用</button>
+                            <button class="btn btn-sm btn-danger" onclick="deleteCard({{ card.id }}, '{{ card.card_key[:16] }}...')">删除</button>
+                            {% else %}
+                            <span style="color: var(--text-muted); font-size: 0.8rem;">-</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    {% else %}
+                    <tr>
+                        <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 32px;">暂无邀请码数据</td>
+                    </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+        {% if total_pages > 1 %}
+        <div class="pagination">
+            {% if page > 1 %}
+            <a href="{{ url_for('admin.card_manage', page=page-1) }}">上一页</a>
+            {% endif %}
+            {% for p in range(1, total_pages + 1) %}
+            <a href="{{ url_for('admin.card_manage', page=p) }}" class="{% if p == page %}active{% endif %}">{{ p }}</a>
+            {% endfor %}
+            {% if page < total_pages %}
+            <a href="{{ url_for('admin.card_manage', page=page+1) }}">下一页</a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+<div class="modal-overlay" id="cardGenerateModal" style="display: none;">
+    <div class="modal-box">
+        <h3>生成邀请码</h3>
+        <form id="cardGenerateForm" novalidate>
+            <div class="form-group">
+                <label class="form-label" for="cardType">邀请码类型</label>
+                <select id="cardType" class="form-select" onchange="onCardTypeChange()">
+                    <option value="vip">VIP邀请码</option>
+                    <option value="points">积分邀请码</option>
+                    <option value="register">注册邀请码</option>
+                </select>
+            </div>
+            <div class="form-group" id="vipDaysGroup">
+                <label class="form-label" for="cardVipDays">VIP天数</label>
+                <input type="number" id="cardVipDays" class="form-input" value="30" min="1">
+            </div>
+            <div class="form-group" id="pointsGroup" style="display: none;">
+                <label class="form-label" for="cardPoints">积分数量</label>
+                <input type="number" id="cardPoints" class="form-input" value="100" min="1">
+            </div>
+            <div class="form-group">
+                <label class="form-label">生成数量</label>
+                <div class="range-group">
+                    <input type="range" id="cardCountSlider" min="1" max="500" value="10" oninput="syncRangeValue()">
+                    <span class="range-val" id="rangeValDisplay">10</span>
+                </div>
+                <input type="number" id="cardCount" class="form-input" value="10" min="1" max="500" style="margin-top:6px; display:none;">
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="cardNotes">备注</label>
+                <input type="text" id="cardNotes" class="form-input" placeholder="可选，如批次说明">
+            </div>
+            <div id="generatedResult" style="display: none;">
+                <div class="generated-result">
+                    <div class="gr-header">
+                        <span class="gr-title">生成成功</span>
+                        <button type="button" class="btn btn-sm btn-outline" onclick="copyGeneratedCards()">一键复制全部</button>
+                    </div>
+                    <div class="generated-cards-grid" id="generatedCardsGrid"></div>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-outline" onclick="closeCardGenerateModal()">取消</button>
+                <button type="submit" class="btn btn-primary" id="cardGenerateSubmitBtn">生成</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+(function() {
+    var cardGenerateModal = document.getElementById('cardGenerateModal');
+    var cardGenerateForm = document.getElementById('cardGenerateForm');
+    var submitBtn = document.getElementById('cardGenerateSubmitBtn');
+    var generatedResult = document.getElementById('generatedResult');
+    var generatedCardsGrid = document.getElementById('generatedCardsGrid');
+    var countSlider = document.getElementById('cardCountSlider');
+    var rangeValDisplay = document.getElementById('rangeValDisplay');
+    var countInput = document.getElementById('cardCount');
+
+    window.syncRangeValue = function() {
+        var val = parseInt(countSlider.value);
+        rangeValDisplay.textContent = val;
+        countInput.value = val;
+    };
+
+    window.openCardGenerateModal = function() {
+        cardGenerateForm.reset();
+        countSlider.value = 10;
+        rangeValDisplay.textContent = '10';
+        countInput.value = 10;
+        document.getElementById('cardVipDays').value = 30;
+        document.getElementById('cardPoints').value = 100;
+        document.getElementById('vipDaysGroup').style.display = 'block';
+        document.getElementById('pointsGroup').style.display = 'none';
+        generatedResult.style.display = 'none';
+        generatedCardsGrid.innerHTML = '';
+        submitBtn.disabled = false;
+        submitBtn.textContent = '生成';
+        cardGenerateModal.style.display = 'flex';
+    };
+
+    window.closeCardGenerateModal = function() { cardGenerateModal.style.display = 'none'; };
+    cardGenerateModal.addEventListener('click', function(e) { if (e.target === cardGenerateModal) closeCardGenerateModal(); });
+
+    window.onCardTypeChange = function() {
+        var type = document.getElementById('cardType').value;
+        if (type === 'vip') {
+            document.getElementById('vipDaysGroup').style.display = 'block';
+            document.getElementById('pointsGroup').style.display = 'none';
+        } else if (type === 'points') {
+            document.getElementById('vipDaysGroup').style.display = 'none';
+            document.getElementById('pointsGroup').style.display = 'block';
+        } else {
+            document.getElementById('vipDaysGroup').style.display = 'none';
+            document.getElementById('pointsGroup').style.display = 'none';
+        }
+    };
+
+    cardGenerateForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        var count = parseInt(countSlider.value);
+        if (count < 1 || count > 500) { Toast.warning('生成数量需在1-500之间'); return; }
+        var cardType = document.getElementById('cardType').value;
+        var data = {
+            count: count,
+            card_type: cardType,
+            vip_days: parseInt(document.getElementById('cardVipDays').value) || 30,
+            points: parseInt(document.getElementById('cardPoints').value) || 0,
+            notes: document.getElementById('cardNotes').value.trim()
+        };
+        submitBtn.disabled = true;
+        submitBtn.textContent = '生成中...';
+        API.post('/admin/api/card/generate', data).then(function(res) {
+            if (res.success) {
+                Toast.success(res.message || '生成成功');
+                if (res.data && res.data.cards) {
+                    var html = '';
+                    res.data.cards.forEach(function(card, index) {
+                        html += '<div class="generated-card-item"><span class="gc-num">' + (index + 1) + '.</span><span class="gc-key">' + card + '</span></div>';
+                    });
+                    generatedCardsGrid.innerHTML = html;
+                    generatedResult.style.display = 'block';
+                }
+                submitBtn.textContent = '继续生成';
+            } else {
+                Toast.error(res.message || '生成失败');
+                submitBtn.textContent = '生成';
+            }
+            submitBtn.disabled = false;
+        }).catch(function() { Toast.error('网络错误'); submitBtn.disabled = false; submitBtn.textContent = '生成'; });
+    });
+
+    window.copyGeneratedCards = function() {
+        var text = '';
+        var items = generatedCardsGrid.querySelectorAll('.generated-card-item .gc-key');
+        items.forEach(function(item) { text += item.textContent + '\n'; });
+        if (text) {
+            navigator.clipboard.writeText(text.trim()).then(function() {
+                Toast.success('邀请码已复制到剪贴板');
+            }).catch(function() { Toast.error('复制失败，请手动复制'); });
+        }
+    };
+
+    window.disableCard = function(cardId) {
+        Modal.confirm('禁用邀请码', '确定要禁用这张邀请码吗？禁用后将无法兑换。', function() {
+            API.post('/admin/api/card/disable/' + cardId, {}).then(function(res) {
+                if (res.success) { Toast.success(res.message || '邀请码已禁用'); setTimeout(function() { window.location.reload(); }, 500); }
+                else { Toast.error(res.message || '操作失败'); }
+            }).catch(function() { Toast.error('网络错误'); });
+        });
+    };
+
+    window.deleteCard = function(cardId, cardPreview) {
+        Modal.confirm('删除邀请码', '确定要删除邀请码 "' + cardPreview + '" 吗？此操作不可撤销。', function() {
+            API.post('/admin/api/card/delete/' + cardId, {}).then(function(res) {
+                if (res.success) { Toast.success(res.message || '邀请码已删除'); setTimeout(function() { window.location.reload(); }, 500); }
+                else { Toast.error(res.message || '删除失败'); }
+            }).catch(function() { Toast.error('网络错误'); });
+        });
+    };
+})();
+</script>
+{% endblock %}

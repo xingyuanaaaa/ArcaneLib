@@ -1,0 +1,234 @@
+{% extends "base.html" %}
+{% block title %}反馈管理 - 管理后台 - {{ site_name }}{% endblock %}
+{% block head_extra %}
+<style>
+    .admin-layout { display: flex; min-height: calc(100vh - var(--header-h)); padding-top: var(--header-h); }
+    .admin-sidebar { width: 220px; min-width: 220px; background: rgba(10, 10, 22, 0.92); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-right: 1px solid var(--glass-border); padding: 16px 0; position: fixed; top: var(--header-h); left: 0; bottom: 0; z-index: 900; overflow-y: auto; }
+    .admin-sidebar .sidebar-logo { font-family: var(--font-display); font-size: 1rem; font-weight: 700; color: var(--gold); padding: 0 18px 12px; margin-bottom: 6px; border-bottom: 1px solid var(--glass-border); letter-spacing: 2px; text-shadow: 0 0 14px var(--gold-glow); }
+    .admin-sidebar nav { display: flex; flex-direction: column; gap: 1px; padding: 0 8px; }
+    .admin-sidebar nav a { display: block; padding: 9px 14px; color: var(--text-secondary); text-decoration: none; font-size: 0.82rem; border-radius: var(--radius-sm); transition: all 0.25s; font-weight: 500; font-family: var(--font-ui); }
+    .admin-sidebar nav a:hover { background: var(--glass-hover); color: var(--text-gold); }
+    .admin-sidebar nav a.active { background: var(--glass-hover); color: var(--gold); font-weight: 600; border-left: 2px solid var(--gold); }
+    .admin-sidebar nav a.return-link { color: var(--text-muted); margin-top: 6px; border-top: 1px solid var(--glass-border); padding-top: 12px; font-size: 0.76rem; }
+    .admin-sidebar nav a.return-link:hover { color: var(--gold); }
+    .admin-main { flex: 1; margin-left: 220px; padding: 24px 28px; min-height: calc(100vh - var(--header-h)); }
+    .page-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
+    .page-header h2 { font-family: var(--font-display); font-size: 1.2rem; font-weight: 700; color: var(--text-gold); letter-spacing: 1px; }
+    .filter-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+    .filter-tab { padding: 6px 14px; border-radius: 16px; font-size: 0.76rem; font-weight: 500; text-decoration: none; cursor: pointer; transition: all 0.25s; background: rgba(255,255,255,0.02); border: 1px solid var(--glass-border); color: var(--text-secondary); font-family: var(--font-ui); }
+    .filter-tab:hover { border-color: var(--gold); color: var(--gold); background: rgba(201,160,80,0.04); }
+    .filter-tab.active { background: rgba(201,160,80,0.08); color: var(--gold); border-color: var(--gold); }
+    .feedback-cards { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+    .fb-card { background: var(--glass-card); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border: 1px solid var(--glass-border); border-radius: var(--radius-md); padding: 16px 18px; transition: all 0.25s; }
+    .fb-card:hover { border-color: rgba(201, 160, 80, 0.2); transform: translateY(-1px); }
+    .fb-card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+    .fb-card-user { display: flex; align-items: center; gap: 8px; }
+    .fb-card-avatar { width: 28px; height: 28px; border-radius: 50%; background: rgba(201, 160, 80, 0.1); border: 1px solid rgba(201, 160, 80, 0.2); display: flex; align-items: center; justify-content: center; font-size: 0.7rem; color: var(--gold); font-weight: 700; font-family: var(--font-display); }
+    .fb-card-username { font-size: 0.82rem; font-weight: 600; color: var(--text-primary); font-family: var(--font-ui); }
+    .fb-card-title { font-size: 0.88rem; font-weight: 600; color: var(--text-primary); font-family: var(--font-ui); margin-bottom: 6px; }
+    .fb-card-content { font-size: 0.8rem; color: var(--text-secondary); line-height: 1.5; margin-bottom: 10px; font-family: var(--font-ui); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .fb-card-footer { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+    .fb-card-footer .fb-time { font-size: 0.72rem; color: var(--text-muted); font-family: var(--font-ui); }
+    .fb-card-footer .fb-actions { display: flex; gap: 6px; }
+    .fb-badge-type { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 0.66rem; font-weight: 600; letter-spacing: 0.5px; font-family: var(--font-ui); }
+    .fb-badge-type.bug { background: rgba(155, 44, 44, 0.1); color: #e88181; border: 1px solid rgba(155, 44, 44, 0.2); }
+    .fb-badge-type.suggestion { background: rgba(124, 58, 237, 0.1); color: #a78bfa; border: 1px solid rgba(124, 58, 237, 0.2); }
+    .fb-badge-type.other { background: rgba(201, 160, 80, 0.1); color: var(--gold); border: 1px solid rgba(201, 160, 80, 0.2); }
+    .fb-badge-status { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 0.66rem; font-weight: 600; font-family: var(--font-ui); }
+    .fb-badge-status.pending { background: rgba(201, 160, 80, 0.1); color: var(--gold); border: 1px solid rgba(201, 160, 80, 0.2); }
+    .fb-badge-status.resolved { background: rgba(20, 184, 166, 0.1); color: var(--arcane-teal); border: 1px solid rgba(20, 184, 166, 0.2); }
+    .fb-badge-status.closed { background: rgba(255, 255, 255, 0.04); color: var(--text-muted); border: 1px solid rgba(255, 255, 255, 0.08); }
+    .fb-card-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .feedback-content-box { padding: 10px; background: rgba(255,255,255,0.02); border-radius: var(--radius-sm); font-size: 0.84rem; white-space: pre-wrap; color: var(--text-primary); border: 1px solid var(--glass-border); font-family: var(--font-ui); }
+    .existing-reply-box { padding: 10px; background: rgba(20,184,166,0.04); border-radius: var(--radius-sm); font-size: 0.84rem; white-space: pre-wrap; color: var(--arcane-teal); border: 1px solid rgba(20,184,166,0.15); font-family: var(--font-ui); }
+    .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 2000; background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; }
+    .modal-box { background: var(--glass-bg); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); border: 1px solid var(--glass-border); border-radius: var(--radius-lg); padding: 24px; width: 90%; max-width: 520px; max-height: 85vh; overflow-y: auto; }
+    .modal-box h3 { font-family: var(--font-display); font-size: 1rem; font-weight: 600; color: var(--gold); margin-bottom: 18px; letter-spacing: 1px; }
+    .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--glass-border); }
+    @media (max-width: 768px) {
+        .admin-sidebar { position: fixed; top: auto; bottom: 0; left: 0; right: 0; width: 100%; min-width: 100%; height: auto; padding: 0; border-right: none; border-top: 1px solid var(--glass-border); overflow-x: auto; overflow-y: hidden; z-index: 950; }
+        .admin-sidebar .sidebar-logo { display: none; }
+        .admin-sidebar nav { flex-direction: row; padding: 6px 10px; gap: 3px; white-space: nowrap; flex-wrap: nowrap; }
+        .admin-sidebar nav a { padding: 7px 12px; font-size: 0.72rem; border-radius: 16px; flex-shrink: 0; }
+        .admin-sidebar nav a.active { border-left: none; border: 1px solid var(--gold); }
+        .admin-sidebar nav a.return-link { border-top: none; margin-top: 0; padding-top: 7px; margin-left: 4px; }
+        .admin-main { margin-left: 0; padding: 16px 14px 90px; }
+        .fb-card { padding: 14px; }
+        .filter-tabs { gap: 4px; }
+        .filter-tab { padding: 5px 10px; font-size: 0.7rem; }
+    }
+</style>
+{% endblock %}
+{% block content %}
+<div class="admin-layout">
+    <aside class="admin-sidebar">
+        <div class="sidebar-logo">{{ site_name }}</div>
+        <nav>
+            <a href="{{ url_for('admin.dashboard') }}">仪表盘</a>
+            <a href="{{ url_for('admin.software_manage') }}">软件管理</a>
+            <a href="{{ url_for('admin.category_manage') }}">分类管理</a>
+            <a href="{{ url_for('admin.user_manage') }}">用户管理</a>
+            <a href="{{ url_for('admin.card_manage') }}">邀请码管理</a>
+            <a href="{{ url_for('admin.announcement_manage') }}">公告管理</a>
+            <a href="{{ url_for('admin.feedback_manage') }}" class="active">反馈管理</a>
+            <a href="{{ url_for('admin.ad_manage') }}">广告管理</a>
+            <a href="{{ url_for('admin.download_stats') }}">下载统计</a>
+            <a href="{{ url_for('admin.settings') }}">系统设置</a>
+            <a href="{{ url_for('main.index') }}" class="return-link">返回前台</a>
+        </nav>
+    </aside>
+    <div class="admin-main">
+        <div class="page-header">
+            <h2>反馈管理</h2>
+            <div class="filter-tabs">
+                <a href="{{ url_for('admin.feedback_manage') }}" class="filter-tab {% if not status_filter %}active{% endif %}">全部</a>
+                <a href="{{ url_for('admin.feedback_manage', status='pending') }}" class="filter-tab {% if status_filter == 'pending' %}active{% endif %}">待处理</a>
+                <a href="{{ url_for('admin.feedback_manage', status='resolved') }}" class="filter-tab {% if status_filter == 'resolved' %}active{% endif %}">已回复</a>
+                <a href="{{ url_for('admin.feedback_manage', status='closed') }}" class="filter-tab {% if status_filter == 'closed' %}active{% endif %}">已关闭</a>
+            </div>
+        </div>
+        <div class="feedback-cards">
+            {% if feedbacks %}
+            {% for fb in feedbacks %}
+            <div class="fb-card">
+                <div class="fb-card-top">
+                    <div class="fb-card-user">
+                        <div class="fb-card-avatar">{{ fb.username[0] | upper }}</div>
+                        <span class="fb-card-username">{{ fb.username }}</span>
+                    </div>
+                    <div class="fb-card-meta">
+                        {% if fb.type == 'bug' %}
+                        <span class="fb-badge-type bug">问题</span>
+                        {% elif fb.type == 'suggestion' %}
+                        <span class="fb-badge-type suggestion">建议</span>
+                        {% else %}
+                        <span class="fb-badge-type other">其他</span>
+                        {% endif %}
+                        {% if fb.status == 'pending' %}
+                        <span class="fb-badge-status pending">待处理</span>
+                        {% elif fb.status == 'resolved' %}
+                        <span class="fb-badge-status resolved">已回复</span>
+                        {% else %}
+                        <span class="fb-badge-status closed">已关闭</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="fb-card-title">{{ fb.title }}</div>
+                <div class="fb-card-content">{{ fb.content or '无内容' }}</div>
+                <div class="fb-card-footer">
+                    <span class="fb-time">{{ fb.created_at }}</span>
+                    <div class="fb-actions">
+                        <button class="btn btn-sm btn-primary" onclick="openReplyModal({{ fb.id }}, '{{ fb.title }}', '{{ fb.content or '' }}', '{{ fb.admin_reply or '' }}', '{{ fb.status }}')">{{ '回复' if fb.status == 'pending' else '查看' }}</button>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+            {% else %}
+            <div class="empty-state">
+                <div class="empty-label">暂无反馈数据</div>
+                <p>当前筛选条件下没有反馈记录</p>
+            </div>
+            {% endif %}
+        </div>
+        {% if total_pages > 1 %}
+        <div class="pagination">
+            {% if page > 1 %}
+            <a href="{{ url_for('admin.feedback_manage', page=page-1, status=status_filter or '') }}">上一页</a>
+            {% endif %}
+            {% for p in range(1, total_pages + 1) %}
+            <a href="{{ url_for('admin.feedback_manage', page=p, status=status_filter or '') }}" class="{% if p == page %}active{% endif %}">{{ p }}</a>
+            {% endfor %}
+            {% if page < total_pages %}
+            <a href="{{ url_for('admin.feedback_manage', page=page+1, status=status_filter or '') }}">下一页</a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+<div class="modal-overlay" id="replyModal" style="display: none;">
+    <div class="modal-box">
+        <h3>反馈详情</h3>
+        <form id="replyForm" novalidate>
+            <input type="hidden" id="replyFeedbackId" value="">
+            <div class="form-group">
+                <label class="form-label">反馈标题</label>
+                <div id="replyTitle" class="feedback-content-box" style="font-weight: 600;"></div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">反馈内容</label>
+                <div id="replyContent" class="feedback-content-box"></div>
+            </div>
+            <div class="form-group" id="existingReplyGroup" style="display: none;">
+                <label class="form-label">已有回复</label>
+                <div id="existingReply" class="existing-reply-box"></div>
+            </div>
+            <div class="form-group" id="replyInputGroup">
+                <label class="form-label" for="replyText">回复内容</label>
+                <textarea id="replyText" class="form-textarea" placeholder="请输入回复内容..." rows="3"></textarea>
+            </div>
+            <div class="form-group" id="replyStatusGroup">
+                <label class="form-label" for="replyStatus">状态</label>
+                <select id="replyStatus" class="form-select">
+                    <option value="resolved">已回复</option>
+                    <option value="pending">待处理</option>
+                    <option value="closed">已关闭</option>
+                </select>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-outline" onclick="closeReplyModal()">关闭</button>
+                <button type="submit" class="btn btn-primary" id="replySubmitBtn">提交回复</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+(function() {
+    var replyModal = document.getElementById('replyModal');
+    var replyForm = document.getElementById('replyForm');
+    var feedbackId = document.getElementById('replyFeedbackId');
+    var submitBtn = document.getElementById('replySubmitBtn');
+    var replyInputGroup = document.getElementById('replyInputGroup');
+    var replyStatusGroup = document.getElementById('replyStatusGroup');
+
+    window.openReplyModal = function(fbId, title, content, existingReply, status) {
+        replyForm.reset();
+        feedbackId.value = fbId;
+        document.getElementById('replyTitle').textContent = title;
+        document.getElementById('replyContent').textContent = content || '无内容';
+        if (existingReply) {
+            document.getElementById('existingReplyGroup').style.display = 'block';
+            document.getElementById('existingReply').textContent = existingReply;
+            replyInputGroup.style.display = 'none';
+            replyStatusGroup.style.display = 'none';
+            submitBtn.style.display = 'none';
+        } else {
+            document.getElementById('existingReplyGroup').style.display = 'none';
+            replyInputGroup.style.display = 'block';
+            replyStatusGroup.style.display = 'block';
+            submitBtn.style.display = '';
+            submitBtn.textContent = '提交回复';
+            submitBtn.disabled = false;
+        }
+        replyModal.style.display = 'flex';
+    };
+
+    window.closeReplyModal = function() { replyModal.style.display = 'none'; replyForm.reset(); };
+    replyModal.addEventListener('click', function(e) { if (e.target === replyModal) closeReplyModal(); });
+
+    replyForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        var reply = document.getElementById('replyText').value.trim();
+        if (!reply) { Toast.warning('请输入回复内容'); return; }
+        var data = { reply: reply, status: document.getElementById('replyStatus').value };
+        submitBtn.disabled = true; submitBtn.textContent = '提交中...';
+        API.post('/admin/api/feedback/reply/' + feedbackId.value, data).then(function(res) {
+            if (res.success) { Toast.success(res.message || '回复成功'); closeReplyModal(); setTimeout(function() { window.location.reload(); }, 500); }
+            else { Toast.error(res.message || '回复失败'); }
+            submitBtn.disabled = false; submitBtn.textContent = '提交回复';
+        }).catch(function() { Toast.error('网络错误'); submitBtn.disabled = false; submitBtn.textContent = '提交回复'; });
+    });
+})();
+</script>
+{% endblock %}

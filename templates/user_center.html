@@ -1,0 +1,957 @@
+{% extends "base.html" %}
+{% block title %}我的典籍 - Arcane库{% endblock %}
+
+{% block head_extra %}
+<style>
+/* 签到弹窗 */
+.checkin-popup-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0,0,0,0.6);
+    animation: ckFadeIn 0.25s ease;
+}
+@keyframes ckFadeIn { from { opacity: 0; } to { opacity: 1; } }
+.checkin-popup {
+    background: var(--glass-bg);
+    backdrop-filter: blur(28px) saturate(200%);
+    -webkit-backdrop-filter: blur(28px) saturate(200%);
+    border: 1px solid rgba(201,160,80,0.2);
+    border-radius: var(--radius-xl);
+    padding: 28px 30px 22px;
+    text-align: center;
+    animation: ckBounce 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    min-width: 230px;
+}
+@keyframes ckBounce { from { transform: scale(0.7); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.checkin-popup .ck-icon {
+    width: 54px; height: 54px;
+    background: linear-gradient(135deg, var(--gold), var(--arcane-purple));
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 12px;
+    font-size: 1.5rem;
+    color: #0f0f1a;
+    font-weight: 900;
+    font-family: var(--font-display);
+}
+.checkin-popup .ck-points {
+    font-size: 1.8rem;
+    font-weight: 800;
+    color: var(--gold);
+    font-family: var(--font-display);
+    line-height: 1;
+    margin: 4px 0;
+    text-shadow: 0 0 12px var(--gold-glow);
+}
+.checkin-popup .ck-label {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-bottom: 16px;
+    font-style: italic;
+}
+.checkin-popup .ck-close {
+    background: linear-gradient(135deg, rgba(201,160,80,0.15), rgba(124,58,237,0.08));
+    border: 1px solid rgba(201,160,80,0.25);
+    color: var(--gold);
+    padding: 7px 28px;
+    border-radius: 16px;
+    font-size: 0.84rem;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: var(--font-ui);
+    transition: all 0.2s;
+}
+.checkin-popup .ck-close:active { transform: scale(0.95); }
+
+/* 收藏列表弹窗 */
+.fav-list-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    z-index: 2000;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    background: rgba(0,0,0,0.6);
+    animation: ckFadeIn 0.25s ease;
+}
+.fav-list-panel {
+    background: rgba(10,10,22,0.97);
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    border: 1px solid rgba(201,160,80,0.1);
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    width: 100%;
+    max-width: 500px;
+    max-height: 70vh;
+    display: flex;
+    flex-direction: column;
+    animation: favSlideUp 0.3s ease;
+}
+@keyframes favSlideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+.fav-list-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 15px 18px;
+    border-bottom: 1px solid rgba(201,160,80,0.08);
+    font-weight: 700;
+    font-size: 0.92rem;
+    font-family: var(--font-ui);
+}
+.fav-list-close {
+    background: none;
+    border: none;
+    font-size: 1.1rem;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 4px 8px;
+    font-family: inherit;
+}
+.fav-list-body { flex: 1; overflow-y: auto; padding: 6px 14px; }
+.fav-item {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    padding: 11px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.03);
+    text-decoration: none;
+    color: var(--text-primary);
+}
+.fav-item:last-child { border-bottom: none; }
+.fav-item-img {
+    width: 40px; height: 40px;
+    border-radius: var(--radius-xs);
+    object-fit: cover;
+    flex-shrink: 0;
+    background: rgba(201,160,80,0.05);
+}
+.fav-item-info { flex: 1; min-width: 0; }
+.fav-item-name { font-size: 0.85rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fav-item-cat { font-size: 0.7rem; color: var(--text-muted); margin-top: 1px; font-style: italic; }
+.fav-empty { text-align: center; padding: 36px 20px; color: var(--text-muted); font-size: 0.82rem; font-style: italic; }
+
+/* 更新提醒列表弹窗 */
+.update-list-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    z-index: 2000;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    background: rgba(0,0,0,0.6);
+    animation: ckFadeIn 0.25s ease;
+}
+.update-list-panel {
+    background: rgba(10,10,22,0.97);
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    border: 1px solid rgba(201,160,80,0.1);
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    width: 100%;
+    max-width: 500px;
+    max-height: 70vh;
+    display: flex;
+    flex-direction: column;
+    animation: favSlideUp 0.3s ease;
+}
+.update-list-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 15px 18px;
+    border-bottom: 1px solid rgba(201,160,80,0.08);
+    font-weight: 700;
+    font-size: 0.92rem;
+    font-family: var(--font-ui);
+}
+.update-list-close {
+    background: none;
+    border: none;
+    font-size: 1.1rem;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 4px 8px;
+    font-family: inherit;
+}
+.update-list-body { flex: 1; overflow-y: auto; padding: 6px 14px; }
+.update-item {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    padding: 11px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.03);
+    text-decoration: none;
+    color: var(--text-primary);
+}
+.update-item:last-child { border-bottom: none; }
+.update-item .new-dot {
+    width: 7px; height: 7px;
+    background: var(--gold);
+    border-radius: 50%;
+    flex-shrink: 0;
+    margin-right: -2px;
+    box-shadow: 0 0 6px var(--gold);
+}
+.update-item-img {
+    width: 40px; height: 40px;
+    border-radius: var(--radius-xs);
+    object-fit: cover;
+    flex-shrink: 0;
+    background: rgba(201,160,80,0.05);
+}
+.update-item-info { flex: 1; min-width: 0; }
+.update-item-name { font-size: 0.85rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.update-item-desc { font-size: 0.7rem; color: var(--gold); margin-top: 1px; }
+.update-empty { text-align: center; padding: 36px 20px; color: var(--text-muted); font-size: 0.82rem; font-style: italic; }
+
+/* 修改密码模态框 */
+.pwd-modal-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0,0,0,0.6);
+    animation: ckFadeIn 0.25s ease;
+}
+.pwd-modal-box {
+    background: var(--glass-bg);
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    border: 1px solid rgba(201,160,80,0.12);
+    border-radius: var(--radius-xl);
+    padding: 22px 20px;
+    width: 90%;
+    max-width: 350px;
+    animation: ckBounce 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+.pwd-modal-box h3 {
+    font-size: 0.95rem;
+    font-weight: 700;
+    margin-bottom: 16px;
+    text-align: center;
+    font-family: var(--font-display);
+    letter-spacing: 1px;
+}
+
+/* 未登录引导 */
+.login-guide {
+    text-align: center;
+    padding: 70px 30px 30px;
+}
+.login-guide .lg-avatar {
+    width: 68px; height: 68px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, rgba(201,160,80,0.12), rgba(124,58,237,0.08));
+    border: 2px solid rgba(201,160,80,0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 14px;
+    font-size: 1.8rem;
+    color: var(--gold);
+    font-weight: 700;
+    font-family: var(--font-display);
+}
+.login-guide .lg-title { font-size: 1rem; font-weight: 700; margin-bottom: 5px; }
+.login-guide .lg-sub { font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 22px; font-style: italic; }
+.login-guide .lg-btn {
+    display: inline-block;
+    padding: 9px 32px;
+    background: linear-gradient(135deg, rgba(201,160,80,0.15), rgba(124,58,237,0.08));
+    border: 1px solid rgba(201,160,80,0.25);
+    color: var(--gold);
+    border-radius: 18px;
+    font-size: 0.86rem;
+    font-weight: 700;
+    text-decoration: none;
+    transition: all 0.2s;
+    font-family: var(--font-ui);
+}
+.login-guide .lg-btn:active { transform: scale(0.95); box-shadow: 0 0 14px var(--gold-glow); }
+
+/* 通用弹窗 */
+.generic-modal-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    z-index: 2000;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    background: rgba(0,0,0,0.6);
+    animation: ckFadeIn 0.2s ease;
+}
+.generic-modal-panel {
+    background: rgba(10,10,22,0.97);
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    border: 1px solid rgba(201,160,80,0.1);
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    width: 100%;
+    max-width: 500px;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    animation: favSlideUp 0.3s ease;
+}
+.generic-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 18px;
+    border-bottom: 1px solid rgba(201,160,80,0.08);
+    font-weight: 700;
+    font-size: 0.92rem;
+    font-family: var(--font-ui);
+}
+.generic-modal-close {
+    background: none; border: none;
+    font-size: 1.1rem; color: var(--text-muted);
+    cursor: pointer; padding: 4px 8px;
+    font-family: inherit;
+}
+.generic-modal-body {
+    flex: 1; overflow-y: auto;
+    padding: 14px 18px 20px;
+}
+
+/* 等级权益样式 */
+.lb-header {
+    text-align: center;
+    padding: 10px 0 14px;
+    border-bottom: 1px solid rgba(201,160,80,0.06);
+    margin-bottom: 12px;
+}
+.lb-level {
+    font-family: var(--font-display);
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--gold);
+    letter-spacing: 2px;
+}
+.lb-progress { font-size: 0.72rem; color: var(--text-muted); margin: 4px 0 8px; }
+.lb-bar {
+    height: 4px; background: rgba(255,255,255,0.06);
+    border-radius: 2px; overflow: hidden; max-width: 200px; margin: 0 auto;
+}
+.lb-fill { height: 100%; background: linear-gradient(90deg, var(--gold), var(--arcane-purple)); border-radius: 2px; transition: width 0.5s; }
+.lb-section { margin: 12px 0; }
+.lb-section-title {
+    font-size: 0.78rem; font-weight: 600; color: var(--text-gold);
+    margin-bottom: 6px; font-family: var(--font-ui);
+}
+.lb-item {
+    font-size: 0.78rem; color: var(--text-primary);
+    padding: 5px 0; display: flex; align-items: center; gap: 8px;
+}
+.lb-item .lb-check { color: var(--gold); font-size: 0.5rem; }
+.lb-item.lb-next { color: var(--text-muted); }
+.lb-item.lb-next .lb-check { color: var(--text-muted); }
+
+/* 积分商店样式 */
+.shop-header {
+    text-align: center;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    padding: 6px 0 12px;
+    border-bottom: 1px solid rgba(201,160,80,0.06);
+    margin-bottom: 10px;
+}
+.shop-points {
+    font-family: var(--font-display);
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--gold);
+}
+.shop-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.03);
+}
+.shop-item:last-child { border-bottom: none; }
+.shop-icon { font-size: 1.5rem; width: 36px; text-align: center; flex-shrink: 0; }
+.shop-info { flex: 1; min-width: 0; }
+.shop-name { font-size: 0.82rem; font-weight: 600; font-family: var(--font-ui); }
+.shop-desc { font-size: 0.65rem; color: var(--text-muted); margin-top: 1px; }
+.shop-price {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--gold);
+    white-space: nowrap;
+    margin-right: 6px;
+}
+.shop-pts { font-size: 0.6rem; color: var(--text-muted); font-weight: 400; }
+.shop-buy-btn {
+    padding: 5px 14px;
+    border-radius: 12px;
+    border: 1px solid rgba(201,160,80,0.2);
+    background: rgba(201,160,80,0.08);
+    color: var(--gold);
+    font-size: 0.72rem;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: var(--font-ui);
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+.shop-buy-btn:active { transform: scale(0.95); background: rgba(201,160,80,0.15); }
+.shop-buy-btn:disabled { opacity: 0.4; }
+</style>
+{% endblock %}
+
+{% block content %}
+{% if g.user %}
+<!-- 顶部用户信息区 -->
+<div class="my-page-header">
+    <div class="my-header-top">
+        <div class="my-avatar">
+            <span>{{ g.user.username[0] | upper }}</span>
+        </div>
+        <div class="my-info">
+            <div class="my-name">{{ g.user.username }}</div>
+            <div class="my-level" id="myLevelBadge">
+                <span id="levelText">加载中...</span>
+                <div class="lv-bar">
+                    <div class="lv-fill" id="lvFill" style="width:0%;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="my-stats">
+        <div class="my-stat-item">
+            <div class="my-stat-val" id="statPoints">{{ g.user.points or 0 }}</div>
+            <div class="my-stat-label">奥术积分</div>
+        </div>
+        <div class="my-stat-item">
+            <div class="my-stat-val" id="statFavorites">-</div>
+            <div class="my-stat-label">收藏典籍</div>
+        </div>
+        <div class="my-stat-item">
+            <div class="my-stat-val" id="statFollowing">-</div>
+            <div class="my-stat-label">关注秘法</div>
+        </div>
+    </div>
+</div>
+
+<!-- 签到卡片 -->
+<div class="checkin-card">
+    <div class="checkin-info">
+        <div class="checkin-title">每日签到</div>
+        <div class="checkin-sub">已连续签到 <span id="consecutiveDays">0</span> 天</div>
+        <div class="checkin-days" id="checkinDots">
+            <span class="checkin-dot">一</span>
+            <span class="checkin-dot">二</span>
+            <span class="checkin-dot">三</span>
+            <span class="checkin-dot">四</span>
+            <span class="checkin-dot">五</span>
+            <span class="checkin-dot">六</span>
+            <span class="checkin-dot">日</span>
+        </div>
+    </div>
+    <button class="checkin-btn" id="checkinBtn" onclick="handleCheckin()">签到</button>
+</div>
+
+<!-- 菜单区 -->
+<div class="my-menu">
+
+    <div class="my-menu-section">
+        <div class="my-menu-item" id="menuFavorites" style="cursor:pointer;">
+            <span class="menu-icon-box mib-gold">&#9672;</span>
+            <span class="menu-text">我的收藏</span>
+            <span class="menu-arrow">&rsaquo;</span>
+        </div>
+        <div class="my-menu-item" id="menuUpdates" style="cursor:pointer;">
+            <span class="menu-icon-box mib-purple">&#9678;</span>
+            <span class="menu-text">更新提醒</span>
+            <span class="menu-badge" id="updateBadge" style="display:none;">新</span>
+            <span class="menu-arrow">&rsaquo;</span>
+        </div>
+        <div class="my-menu-item" id="menuDownloads" style="cursor:pointer;">
+            <span class="menu-icon-box mib-teal">&#9679;</span>
+            <span class="menu-text">下载记录</span>
+            <span class="menu-arrow">&rsaquo;</span>
+        </div>
+    </div>
+
+    <div class="my-menu-section">
+        <a href="{{ url_for('main.card_redeem_page') }}" class="my-menu-item">
+            <span class="menu-icon-box mib-gold">&#9670;</span>
+            <span class="menu-text">邀请码兑换</span>
+            <span class="menu-arrow">&rsaquo;</span>
+        </a>
+        <div class="my-menu-item" id="menuLevelBenefits" style="cursor:pointer;">
+            <span class="menu-icon-box mib-purple">&#9670;</span>
+            <span class="menu-text">等级权益</span>
+            <span class="menu-badge" id="levelBadge">Lv.?</span>
+            <span class="menu-arrow">&rsaquo;</span>
+        </div>
+        <div class="my-menu-item" id="menuPointsShop" style="cursor:pointer;">
+            <span class="menu-icon-box mib-gold">&#9670;</span>
+            <span class="menu-text">积分商店</span>
+            <span class="menu-badge" id="shopPointsBadge">{{ g.user.points or 0 }}</span>
+            <span class="menu-arrow">&rsaquo;</span>
+        </div>
+        <div class="my-menu-item">
+            <span class="menu-icon-box mib-purple">&#9670;</span>
+            <span class="menu-text">VIP 位阶</span>
+            <span class="menu-badge" id="vipBadge">
+                {% if g.user.vip_level and g.user.vip_level > 0 %}
+                VIP {{ g.user.vip_level }}
+                {% else %}
+                普通学者
+                {% endif %}
+            </span>
+            <span class="menu-arrow">&rsaquo;</span>
+        </div>
+        <div class="my-menu-item">
+            <span class="menu-icon-box mib-gold">&#9670;</span>
+            <span class="menu-text">积分明细</span>
+            <span class="menu-badge" id="pointsBadge">{{ g.user.points or 0 }}</span>
+            <span class="menu-arrow">&rsaquo;</span>
+        </div>
+    </div>
+
+    <div class="my-menu-section">
+        <div class="my-menu-item" id="menuChangePwd" style="cursor:pointer;">
+            <span class="menu-icon-box mib-teal">&#9670;</span>
+            <span class="menu-text">修改密码</span>
+            <span class="menu-arrow">&rsaquo;</span>
+        </div>
+        <div class="my-menu-item" id="menuBindMachine" style="cursor:pointer;">
+            <span class="menu-icon-box mib-gray">&#9670;</span>
+            <span class="menu-text">绑定机器码</span>
+            <span class="menu-arrow">&rsaquo;</span>
+        </div>
+        <a href="{{ url_for('main.feedback_page') }}" class="my-menu-item">
+            <span class="menu-icon-box mib-gray">&#9670;</span>
+            <span class="menu-text">提交反馈</span>
+            <span class="menu-arrow">&rsaquo;</span>
+        </a>
+        <div class="my-menu-item" id="menuSettings" style="cursor:pointer;">
+            <span class="menu-icon-box mib-gray">&#9670;</span>
+            <span class="menu-text">设置</span>
+            <span class="menu-arrow">&rsaquo;</span>
+        </div>
+    </div>
+
+    <div class="my-menu-section">
+        <div class="my-menu-item" id="menuLogout" style="cursor:pointer;">
+            <span class="menu-icon-box mib-crimson">&#9670;</span>
+            <span class="menu-text" style="color:#e88181;font-weight:600;">退出登录</span>
+            <span class="menu-arrow">&rsaquo;</span>
+        </div>
+    </div>
+
+</div>
+
+{% else %}
+<!-- 未登录引导 -->
+<div class="login-guide">
+    <div class="lg-avatar">
+        <span>&#9672;</span>
+    </div>
+    <div class="lg-title">尚未登录</div>
+    <div class="lg-sub">登录后即可查阅您的奥术典籍</div>
+    <a href="{{ url_for('auth.login_page') }}" class="lg-btn">登录</a>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{% if g.user %}
+<script>
+(function() {
+
+    function showCheckinPopup(points, consecutiveDays) {
+        var existing = document.querySelector('.checkin-popup-overlay');
+        if (existing) existing.remove();
+        var overlay = document.createElement('div');
+        overlay.className = 'checkin-popup-overlay';
+        overlay.innerHTML =
+            '<div class="checkin-popup">' +
+                '<div class="ck-icon">&#9672;</div>' +
+                '<div class="ck-points">+' + points + '</div>' +
+                '<div class="ck-label">连续签到第 ' + consecutiveDays + ' 天</div>' +
+                '<button class="ck-close" id="ckCloseBtn">确认</button>' +
+            '</div>';
+        document.body.appendChild(overlay);
+        overlay.querySelector('#ckCloseBtn').addEventListener('click', function() { overlay.remove(); });
+        overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
+    }
+
+    function showFavoritesList(items) {
+        var existing = document.querySelector('.fav-list-overlay');
+        if (existing) existing.remove();
+        var itemsHtml = '';
+        if (items && items.length > 0) {
+            items.forEach(function(item) {
+                var imgSrc = item.cover_image || '';
+                var name = item.name || '未知典籍';
+                var cat = item.category_name || '';
+                var detailUrl = '/software/' + (item.id || '#');
+                itemsHtml +=
+                    '<a href="' + detailUrl + '" class="fav-item">' +
+                        (imgSrc ? '<img class="fav-item-img" src="' + imgSrc + '" alt="' + name + '">' : '<div class="fav-item-img"></div>') +
+                        '<div class="fav-item-info">' +
+                            '<div class="fav-item-name">' + name + '</div>' +
+                            '<div class="fav-item-cat">' + cat + '</div>' +
+                        '</div>' +
+                    '</a>';
+            });
+        } else {
+            itemsHtml = '<div class="fav-empty">暂无收藏典籍</div>';
+        }
+        var overlay = document.createElement('div');
+        overlay.className = 'fav-list-overlay';
+        overlay.innerHTML =
+            '<div class="fav-list-panel">' +
+                '<div class="fav-list-header"><span>我的收藏</span><button class="fav-list-close">关闭</button></div>' +
+                '<div class="fav-list-body">' + itemsHtml + '</div>' +
+            '</div>';
+        document.body.appendChild(overlay);
+        overlay.querySelector('.fav-list-close').addEventListener('click', function() { overlay.remove(); });
+        overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
+    }
+
+    function showUpdatesList(items) {
+        var existing = document.querySelector('.update-list-overlay');
+        if (existing) existing.remove();
+        var itemsHtml = '';
+        if (items && items.length > 0) {
+            items.forEach(function(item) {
+                var name = item.name || '未知典籍';
+                var desc = 'v' + (item.version || '') + ' (' + (item.category_name || '') + ')';
+                var detailUrl = '/software/' + (item.id || '#');
+                itemsHtml +=
+                    '<a href="' + detailUrl + '" class="update-item">' +
+                        '<span class="new-dot"></span>' +
+                        '<div class="update-item-img"></div>' +
+                        '<div class="update-item-info">' +
+                            '<div class="update-item-name">' + name + '</div>' +
+                            '<div class="update-item-desc">' + desc + '</div>' +
+                        '</div>' +
+                    '</a>';
+            });
+        } else {
+            itemsHtml = '<div class="update-empty">暂无更新提醒</div>';
+        }
+        var overlay = document.createElement('div');
+        overlay.className = 'update-list-overlay';
+        overlay.innerHTML =
+            '<div class="update-list-panel">' +
+                '<div class="update-list-header"><span>更新提醒</span><button class="update-list-close">关闭</button></div>' +
+                '<div class="update-list-body">' + itemsHtml + '</div>' +
+            '</div>';
+        document.body.appendChild(overlay);
+        overlay.querySelector('.update-list-close').addEventListener('click', function() { overlay.remove(); });
+        overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
+    }
+
+    function showPasswordModal() {
+        var existing = document.querySelector('.pwd-modal-overlay');
+        if (existing) existing.remove();
+        var overlay = document.createElement('div');
+        overlay.className = 'pwd-modal-overlay';
+        overlay.innerHTML =
+            '<div class="pwd-modal-box">' +
+                '<h3>修改密码</h3>' +
+                '<form id="pwdForm" novalidate>' +
+                    '<div class="form-group">' +
+                        '<label class="form-label" for="pwdOld">当前密码</label>' +
+                        '<input type="password" id="pwdOld" class="form-input" placeholder="请输入当前密码" required>' +
+                    '</div>' +
+                    '<div class="form-group">' +
+                        '<label class="form-label" for="pwdNew">新密码</label>' +
+                        '<input type="password" id="pwdNew" class="form-input" placeholder="至少6位" required minlength="6">' +
+                    '</div>' +
+                    '<div class="form-group">' +
+                        '<label class="form-label" for="pwdConfirm">确认新密码</label>' +
+                        '<input type="password" id="pwdConfirm" class="form-input" placeholder="再次输入" required minlength="6">' +
+                    '</div>' +
+                    '<div style="display:flex;gap:8px;margin-top:16px;">' +
+                        '<button type="button" class="btn btn-outline" id="pwdCancelBtn" style="flex:1;">取消</button>' +
+                        '<button type="submit" class="btn btn-primary" id="pwdSubmitBtn" style="flex:1;">确认修改</button>' +
+                    '</div>' +
+                '</form>' +
+            '</div>';
+        document.body.appendChild(overlay);
+        overlay.querySelector('#pwdCancelBtn').addEventListener('click', function() { overlay.remove(); });
+        overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
+        overlay.querySelector('#pwdForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            var oldPassword = overlay.querySelector('#pwdOld').value;
+            var newPassword = overlay.querySelector('#pwdNew').value;
+            var confirmPassword = overlay.querySelector('#pwdConfirm').value;
+            if (!oldPassword) { Toast.warning('请输入当前密码'); return; }
+            if (!newPassword || newPassword.length < 6) { Toast.warning('新密码至少6位'); return; }
+            if (newPassword !== confirmPassword) { Toast.warning('两次输入的密码不一致'); return; }
+            var btn = overlay.querySelector('#pwdSubmitBtn');
+            btn.disabled = true; btn.textContent = '修改中...';
+            API.post('/api/user/change_password', { old_password: oldPassword, new_password: newPassword }).then(function(res) {
+                if (res.success) { Toast.success(res.message || '密码修改成功'); overlay.remove(); }
+                else { Toast.error(res.message || '密码修改失败'); }
+                btn.disabled = false; btn.textContent = '确认修改';
+            }).catch(function() { Toast.error('网络错误'); btn.disabled = false; btn.textContent = '确认修改'; });
+        });
+    }
+
+    function showModal(title, contentHtml) {
+        var existing = document.querySelector('.generic-modal-overlay');
+        if (existing) existing.remove();
+        var overlay = document.createElement('div');
+        overlay.className = 'generic-modal-overlay';
+        overlay.innerHTML =
+            '<div class="generic-modal-panel">' +
+                '<div class="generic-modal-header"><span>' + title + '</span><button class="generic-modal-close">关闭</button></div>' +
+                '<div class="generic-modal-body">' + contentHtml + '</div>' +
+            '</div>';
+        document.body.appendChild(overlay);
+        overlay.querySelector('.generic-modal-close').addEventListener('click', function() { overlay.remove(); });
+        overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
+    }
+
+    function buyShopItem(itemId) {
+        var btn = event.target;
+        btn.disabled = true;
+        btn.textContent = '购买中...';
+        API.post('/api/shop/buy', { item_id: itemId }).then(function(res) {
+            if (res.success) {
+                Toast.success(res.message || '购买成功');
+                if (res.data && res.data.points !== undefined) {
+                    document.getElementById('statPoints').textContent = res.data.points;
+                    document.getElementById('pointsBadge').textContent = res.data.points;
+                    document.getElementById('shopPointsBadge').textContent = res.data.points;
+                }
+                var modal = document.querySelector('.generic-modal-overlay');
+                if (modal) modal.remove();
+            } else {
+                Toast.error(res.message || '购买失败');
+            }
+            btn.disabled = false;
+            btn.textContent = '购买';
+        }).catch(function() {
+            Toast.error('网络错误');
+            btn.disabled = false;
+            btn.textContent = '购买';
+        });
+    }
+
+    /* 签到 */
+    window.handleCheckin = function() {
+        var btn = document.getElementById('checkinBtn');
+        if (btn.classList.contains('done')) return;
+        btn.disabled = true; btn.textContent = '签到中...';
+        API.post('/api/checkin', {}).then(function(res) {
+            if (res.success) {
+                btn.classList.add('done'); btn.textContent = '已签到'; btn.disabled = true;
+                document.getElementById('consecutiveDays').textContent = res.data.consecutive_days || 0;
+                updateCheckinDots(res.data.consecutive_days || 0);
+                if (res.data.total_points !== undefined) {
+                    document.getElementById('statPoints').textContent = res.data.total_points;
+                    document.getElementById('pointsBadge').textContent = res.data.total_points;
+                }
+                if (res.data.level !== undefined) {
+                    document.getElementById('levelText').textContent = 'Lv.' + res.data.level + ' ' + (res.data.level_name || '');
+                    document.getElementById('lvFill').style.width = '0%';
+                }
+                showCheckinPopup(res.data.points_earned || 0, res.data.consecutive_days || 0);
+            } else { Toast.error(res.message || '签到失败'); btn.disabled = false; btn.textContent = '签到'; }
+        }).catch(function() { Toast.error('网络错误'); btn.disabled = false; btn.textContent = '签到'; });
+    };
+
+    function updateCheckinDots(consecutiveDays) {
+        var dots = document.querySelectorAll('#checkinDots .checkin-dot');
+        dots.forEach(function(dot, index) {
+            dot.classList.remove('done');
+            if (index < consecutiveDays) dot.classList.add('done');
+        });
+    }
+
+    /* 初始化 */
+    API.get('/api/checkin/status').then(function(res) {
+        if (res.success) {
+            var btn = document.getElementById('checkinBtn');
+            document.getElementById('consecutiveDays').textContent = res.data.consecutive_days || 0;
+            updateCheckinDots(res.data.consecutive_days || 0);
+            if (res.data.checked_today) { btn.classList.add('done'); btn.textContent = '已签到'; btn.disabled = true; }
+        }
+    }).catch(function() {});
+
+    API.get('/api/user/level').then(function(res) {
+        if (res.success) {
+            document.getElementById('levelText').textContent = 'Lv.' + res.data.level + ' ' + (res.data.level_name || '');
+            document.getElementById('lvFill').style.width = (res.data.level_progress || 0) + '%';
+            document.getElementById('statPoints').textContent = res.data.points || 0;
+            document.getElementById('pointsBadge').textContent = res.data.points || 0;
+            document.getElementById('shopPointsBadge').textContent = res.data.points || 0;
+            document.getElementById('levelBadge').textContent = 'Lv.' + res.data.level;
+            document.getElementById('statFavorites').textContent = res.data.fav_count || 0;
+            document.getElementById('statFollowing').textContent = res.data.follow_count || 0;
+            if (res.data.vip_level && res.data.vip_level > 0) {
+                document.getElementById('vipBadge').textContent = 'VIP ' + res.data.vip_level;
+            }
+            if (res.data.machine_code_bound) {
+                var bindItem = document.getElementById('menuBindMachine');
+                if (bindItem) {
+                    bindItem.style.opacity = '0.6';
+                    bindItem.style.pointerEvents = 'none';
+                    bindItem.querySelector('.menu-text').textContent = '机器码已绑定';
+                }
+            }
+        }
+    }).catch(function() {});
+
+    API.get('/api/follow/updates').then(function(res) {
+        if (res.success && res.data && res.data.length > 0) {
+            var badge = document.getElementById('updateBadge');
+            if (badge) badge.style.display = 'inline-block';
+        }
+    }).catch(function() {});
+
+    /* 菜单事件 */
+    document.getElementById('menuFavorites').addEventListener('click', function() {
+        API.get('/api/favorite/list').then(function(res) {
+            if (res.success) showFavoritesList(res.data || []);
+            else Toast.error(res.message || '获取失败');
+        }).catch(function() { Toast.error('网络错误'); });
+    });
+
+    document.getElementById('menuUpdates').addEventListener('click', function() {
+        API.get('/api/follow/updates').then(function(res) {
+            if (res.success) showUpdatesList(res.data || []);
+            else Toast.error(res.message || '获取失败');
+        }).catch(function() { Toast.error('网络错误'); });
+    });
+
+    document.getElementById('menuDownloads').addEventListener('click', function() {
+        API.get('/api/user/downloads').then(function(res) {
+            if (res.success) {
+                var items = res.data.list || [];
+                var itemsHtml = '';
+                if (items.length > 0) {
+                    items.forEach(function(item) {
+                        var name = item.software_name || '未知软件';
+                        var time = item.downloaded_at || '';
+                        itemsHtml +=
+                            '<div class="fav-item">' +
+                                '<div class="fav-item-img"></div>' +
+                                '<div class="fav-item-info">' +
+                                    '<div class="fav-item-name">' + name + '</div>' +
+                                    '<div class="fav-item-cat">' + time + '</div>' +
+                                '</div>' +
+                            '</div>';
+                    });
+                } else {
+                    itemsHtml = '<div class="fav-empty">暂无下载记录</div>';
+                }
+                var existing = document.querySelector('.fav-list-overlay');
+                if (existing) existing.remove();
+                var overlay = document.createElement('div');
+                overlay.className = 'fav-list-overlay';
+                overlay.innerHTML =
+                    '<div class="fav-list-panel">' +
+                        '<div class="fav-list-header"><span>下载记录</span><button class="fav-list-close">关闭</button></div>' +
+                        '<div class="fav-list-body">' + itemsHtml + '</div>' +
+                    '</div>';
+                document.body.appendChild(overlay);
+                overlay.querySelector('.fav-list-close').addEventListener('click', function() { overlay.remove(); });
+                overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
+            } else {
+                Toast.error(res.message || '获取失败');
+            }
+        }).catch(function() { Toast.error('网络错误'); });
+    });
+
+    document.getElementById('menuChangePwd').addEventListener('click', function() { showPasswordModal(); });
+
+    /* 等级权益 */
+    document.getElementById('menuLevelBenefits').addEventListener('click', function() {
+        API.get('/api/user/level/benefits').then(function(res) {
+            if (res.success) {
+                var d = res.data;
+                var html = '<div class="lb-header">' +
+                    '<div class="lb-level">Lv.' + d.current_level + ' ' + d.current_name + '</div>' +
+                    '<div class="lb-progress">' + d.current_points + ' / ' + d.next_level_points + ' 积分</div>' +
+                    '<div class="lb-bar"><div class="lb-fill" style="width:' + d.progress + '%"></div></div>' +
+                '</div>';
+                if (d.current_benefits) {
+                    html += '<div class="lb-section"><div class="lb-section-title">当前特权</div>';
+                    d.current_benefits.benefits.forEach(function(b) {
+                        html += '<div class="lb-item"><span class="lb-check">&#9672;</span>' + b + '</div>';
+                    });
+                    html += '</div>';
+                }
+                if (d.next_benefits) {
+                    html += '<div class="lb-section"><div class="lb-section-title">下一级特权（' + d.next_benefits.name + '）</div>';
+                    d.next_benefits.benefits.forEach(function(b) {
+                        html += '<div class="lb-item lb-next"><span class="lb-check">&#9678;</span>' + b + '</div>';
+                    });
+                    html += '</div>';
+                }
+                showModal('等级权益', html);
+            } else { Toast.error(res.message || '获取失败'); }
+        }).catch(function() { Toast.error('网络错误'); });
+    });
+
+    /* 积分商店 */
+    document.getElementById('menuPointsShop').addEventListener('click', function() {
+        API.get('/api/shop/items').then(function(res) {
+            if (res.success) {
+                var items = res.data.items || [];
+                var points = res.data.user_points || 0;
+                var html = '<div class="shop-header">我的积分: <span class="shop-points">' + points + '</span></div>';
+                items.forEach(function(item) {
+                    html += '<div class="shop-item" data-id="' + item.id + '">' +
+                        '<div class="shop-icon">' + (item.icon || '📦') + '</div>' +
+                        '<div class="shop-info">' +
+                            '<div class="shop-name">' + item.name + '</div>' +
+                            '<div class="shop-desc">' + item.description + '</div>' +
+                        '</div>' +
+                        '<div class="shop-price">' + item.price + ' <span class="shop-pts">积分</span></div>' +
+                        '<button class="shop-buy-btn" onclick="buyShopItem(' + item.id + ')">购买</button>' +
+                    '</div>';
+                });
+                showModal('积分商店', html);
+            } else { Toast.error(res.message || '获取失败'); }
+        }).catch(function() { Toast.error('网络错误'); });
+    });
+
+    document.getElementById('menuBindMachine').addEventListener('click', function() {
+        var btn = this;
+        btn.style.opacity = '0.6'; btn.style.pointerEvents = 'none';
+        btn.querySelector('.menu-text').textContent = '获取机器码...';
+        getMachineCode().then(function(machineCode) {
+            Toast.info('机器码: ' + machineCode);
+            API.post('/api/user/bind_machine', { machine_code: machineCode }).then(function(res) {
+                if (res.success) Toast.success(res.message || '绑定成功');
+                else Toast.error(res.message || '绑定失败');
+                btn.style.opacity = '1'; btn.style.pointerEvents = 'auto';
+                btn.querySelector('.menu-text').textContent = '绑定机器码';
+            }).catch(function() { Toast.error('网络错误'); btn.style.opacity = '1'; btn.style.pointerEvents = 'auto'; btn.querySelector('.menu-text').textContent = '绑定机器码'; });
+        }).catch(function() { Toast.error('获取失败'); btn.style.opacity = '1'; btn.style.pointerEvents = 'auto'; btn.querySelector('.menu-text').textContent = '绑定机器码'; });
+    });
+
+    document.getElementById('menuSettings').addEventListener('click', function() { Toast.info('设置功能开发中'); });
+
+    document.getElementById('menuLogout').addEventListener('click', function() {
+        Modal.confirm('退出登录', '确定要退出登录吗？', function() {
+            API.post('/api/logout', {}).then(function(res) {
+                if (res.success) { Toast.success(res.message || '已退出'); setTimeout(function() { window.location.href = '/'; }, 800); }
+                else Toast.error(res.message || '退出失败');
+            }).catch(function() { Toast.error('网络错误'); });
+        });
+    });
+
+})();
+</script>
+{% endif %}
+{% endblock %}

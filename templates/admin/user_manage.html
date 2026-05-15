@@ -1,0 +1,338 @@
+{% extends "base.html" %}
+{% block title %}用户管理 - 管理后台 - {{ site_name }}{% endblock %}
+{% block head_extra %}
+<style>
+    .admin-layout { display: flex; min-height: calc(100vh - var(--header-h)); padding-top: var(--header-h); }
+    .admin-sidebar { width: 220px; min-width: 220px; background: rgba(10, 10, 22, 0.92); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-right: 1px solid var(--glass-border); padding: 16px 0; position: fixed; top: var(--header-h); left: 0; bottom: 0; z-index: 900; overflow-y: auto; }
+    .admin-sidebar .sidebar-logo { font-family: var(--font-display); font-size: 1rem; font-weight: 700; color: var(--gold); padding: 0 18px 12px; margin-bottom: 6px; border-bottom: 1px solid var(--glass-border); letter-spacing: 2px; text-shadow: 0 0 14px var(--gold-glow); }
+    .admin-sidebar nav { display: flex; flex-direction: column; gap: 1px; padding: 0 8px; }
+    .admin-sidebar nav a { display: block; padding: 9px 14px; color: var(--text-secondary); text-decoration: none; font-size: 0.82rem; border-radius: var(--radius-sm); transition: all 0.25s; font-weight: 500; font-family: var(--font-ui); }
+    .admin-sidebar nav a:hover { background: var(--glass-hover); color: var(--text-gold); }
+    .admin-sidebar nav a.active { background: var(--glass-hover); color: var(--gold); font-weight: 600; border-left: 2px solid var(--gold); }
+    .admin-sidebar nav a.return-link { color: var(--text-muted); margin-top: 6px; border-top: 1px solid var(--glass-border); padding-top: 12px; font-size: 0.76rem; }
+    .admin-sidebar nav a.return-link:hover { color: var(--gold); }
+    .admin-main { flex: 1; margin-left: 220px; padding: 24px 28px; min-height: calc(100vh - var(--header-h)); }
+    .admin-table { background: var(--glass-card); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border: 1px solid var(--glass-border); border-radius: var(--radius-md); overflow: hidden; margin-bottom: 20px; }
+    .admin-table table { width: 100%; border-collapse: collapse; }
+    .admin-table thead th { font-family: var(--font-display); font-size: 0.68rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1.5px; padding: 12px 14px; text-align: left; border-bottom: 1px solid var(--glass-border); background: rgba(0, 0, 0, 0.15); }
+    .admin-table tbody td { padding: 11px 14px; font-size: 0.84rem; color: var(--text-primary); border-bottom: 1px solid rgba(255, 255, 255, 0.03); font-family: var(--font-ui); }
+    .admin-table tbody tr:hover { background: var(--glass-hover); }
+    .admin-table tbody tr:last-child td { border-bottom: none; }
+    .admin-table tbody tr.banned-row { background: rgba(155, 44, 44, 0.04); }
+    .admin-table tbody tr.banned-row td { color: var(--text-muted); }
+
+    .page-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
+    .page-header h2 { font-family: var(--font-display); font-size: 1.2rem; font-weight: 700; color: var(--text-gold); letter-spacing: 1px; }
+
+    .search-form { display: flex; gap: 5px; align-items: center; }
+    .search-form input {
+        padding: 8px 14px; border-radius: 20px; font-size: 0.82rem;
+        background: var(--glass-card); border: 1px solid var(--glass-border);
+        color: var(--text-primary); outline: none; font-family: var(--font-ui);
+        width: 200px; transition: all 0.25s ease;
+    }
+    .search-form input:focus { border-color: var(--gold); box-shadow: 0 0 14px var(--gold-glow); width: 240px; }
+    .search-form input::placeholder { color: var(--text-muted); }
+
+    .badge-success { background: rgba(20,184,166,0.12); color: var(--arcane-teal); border: 1px solid rgba(20,184,166,0.2); }
+    .badge-danger { background: rgba(155,44,44,0.12); color: #e88181; border: 1px solid rgba(155,44,44,0.2); }
+    .badge-warning { background: rgba(201,160,80,0.12); color: var(--gold); border: 1px solid rgba(201,160,80,0.2); }
+    .badge-info { background: rgba(124,58,237,0.12); color: #a78bfa; border: 1px solid rgba(124,58,237,0.2); }
+    .badge-vip {
+        background: linear-gradient(135deg, rgba(201,160,80,0.15), rgba(124,58,237,0.08));
+        border: 1px solid rgba(201,160,80,0.25);
+        color: var(--gold);
+        font-weight: 600;
+    }
+    .badge-vip-gold { background: linear-gradient(135deg, rgba(245,158,11,0.15), rgba(201,160,80,0.12)); border-color: rgba(245,158,11,0.3); color: #fbbf24; }
+
+    .user-avatar {
+        width: 32px; height: 32px; border-radius: 50%;
+        display: inline-flex; align-items: center; justify-content: center;
+        font-weight: 700; font-size: 0.78rem; text-transform: uppercase;
+        background: var(--glass-hover); color: var(--text-secondary);
+        border: 1px solid var(--glass-border); margin-right: 8px; flex-shrink: 0;
+    }
+    .user-avatar.vip-avatar {
+        background: linear-gradient(135deg, rgba(201,160,80,0.2), rgba(124,58,237,0.1));
+        border-color: rgba(201,160,80,0.4);
+        color: var(--gold);
+    }
+    .user-name-cell { display: flex; align-items: center; }
+
+    .ban-status-tag {
+        display: inline-flex; align-items: center; gap: 4px;
+        padding: 3px 8px; border-radius: 10px; font-size: 0.7rem;
+        font-weight: 600; font-family: var(--font-ui);
+    }
+    .ban-status-banned { background: rgba(155,44,44,0.15); color: #e88181; border: 1px solid rgba(155,44,44,0.25); }
+
+    .toggle-switch { position: relative; display: inline-block; width: 42px; height: 22px; }
+    .toggle-switch input { opacity: 0; width: 0; height: 0; }
+    .toggle-slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background: rgba(255,255,255,0.08); border: 1px solid var(--glass-border); border-radius: 22px; transition: all 0.3s ease; }
+    .toggle-slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 2px; bottom: 2px; background: var(--text-muted); border-radius: 50%; transition: all 0.3s ease; }
+    .toggle-switch input:checked + .toggle-slider { background: rgba(155,44,44,0.2); border-color: rgba(155,44,44,0.4); }
+    .toggle-switch input:checked + .toggle-slider:before { background: #e88181; transform: translateX(20px); }
+
+    .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 2000; background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; }
+    .modal-box { background: var(--glass-bg); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); border: 1px solid var(--glass-border); border-radius: var(--radius-lg); padding: 28px; width: 90%; max-width: 520px; max-height: 85vh; overflow-y: auto; }
+    .modal-box h3 { font-family: var(--font-display); font-size: 1rem; font-weight: 600; color: var(--gold); margin-bottom: 20px; letter-spacing: 1px; }
+    .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 20px; padding-top: 14px; border-top: 1px solid var(--glass-border); }
+
+    .modal-user-header { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; padding-bottom: 14px; border-bottom: 1px solid var(--glass-border); }
+    .modal-avatar {
+        width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+        font-weight: 700; font-size: 1rem; text-transform: uppercase;
+        background: var(--glass-hover); color: var(--text-secondary);
+        border: 1px solid var(--glass-border);
+    }
+    .modal-username { font-weight: 600; font-size: 0.95rem; color: var(--text-primary); font-family: var(--font-ui); }
+    .modal-user-id { font-size: 0.72rem; color: var(--text-muted); }
+
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
+    .ban-section { background: rgba(155,44,44,0.04); border: 1px solid rgba(155,44,44,0.12); border-radius: var(--radius-sm); padding: 14px; margin-top: 6px; }
+    .ban-section .ban-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+    .ban-section .ban-label { font-size: 0.8rem; color: #e88181; font-weight: 600; font-family: var(--font-ui); }
+    .ban-section textarea { margin-top: 8px; }
+
+    @media (max-width: 768px) {
+        .admin-sidebar { position: fixed; top: auto; bottom: 0; left: 0; right: 0; width: 100%; min-width: 100%; height: auto; padding: 0; border-right: none; border-top: 1px solid var(--glass-border); overflow-x: auto; overflow-y: hidden; z-index: 950; }
+        .admin-sidebar .sidebar-logo { display: none; }
+        .admin-sidebar nav { flex-direction: row; padding: 6px 10px; gap: 3px; white-space: nowrap; flex-wrap: nowrap; }
+        .admin-sidebar nav a { padding: 7px 12px; font-size: 0.72rem; border-radius: 16px; flex-shrink: 0; }
+        .admin-sidebar nav a.active { border-left: none; border: 1px solid var(--gold); }
+        .admin-sidebar nav a.return-link { border-top: none; margin-top: 0; padding-top: 7px; margin-left: 4px; }
+        .admin-main { margin-left: 0; padding: 16px 14px 90px; }
+        .search-form input { width: 140px; }
+        .search-form input:focus { width: 160px; }
+        .form-row { grid-template-columns: 1fr; }
+        .modal-box { padding: 20px; }
+    }
+</style>
+{% endblock %}
+{% block content %}
+<div class="admin-layout">
+    <aside class="admin-sidebar">
+        <div class="sidebar-logo">{{ site_name }}</div>
+        <nav>
+            <a href="{{ url_for('admin.dashboard') }}">仪表盘</a>
+            <a href="{{ url_for('admin.software_manage') }}">软件管理</a>
+            <a href="{{ url_for('admin.category_manage') }}">分类管理</a>
+            <a href="{{ url_for('admin.user_manage') }}" class="active">用户管理</a>
+            <a href="{{ url_for('admin.card_manage') }}">邀请码管理</a>
+            <a href="{{ url_for('admin.announcement_manage') }}">公告管理</a>
+            <a href="{{ url_for('admin.feedback_manage') }}">反馈管理</a>
+            <a href="{{ url_for('admin.ad_manage') }}">广告管理</a>
+            <a href="{{ url_for('admin.download_stats') }}">下载统计</a>
+            <a href="{{ url_for('admin.settings') }}">系统设置</a>
+            <a href="{{ url_for('main.index') }}" class="return-link">返回前台</a>
+        </nav>
+    </aside>
+    <div class="admin-main">
+        <div class="page-header">
+            <h2>用户管理</h2>
+            <form class="search-form" onsubmit="event.preventDefault(); window.location.href='{{ url_for('admin.user_manage') }}?search='+encodeURIComponent(this.querySelector('input').value)">
+                <input type="text" name="search" placeholder="搜索用户名或邮箱..." value="{{ search }}">
+                <button type="submit" class="btn btn-sm btn-primary">搜索</button>
+                {% if search %}
+                <a href="{{ url_for('admin.user_manage') }}" class="btn btn-sm btn-outline">清除</a>
+                {% endif %}
+            </form>
+        </div>
+        <div class="admin-table">
+            <table>
+                <thead>
+                    <tr>
+                        <th>用户</th>
+                        <th>邮箱</th>
+                        <th>VIP等级</th>
+                        <th>积分</th>
+                        <th>状态</th>
+                        <th>注册时间</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if users %}
+                    {% for u in users %}
+                    <tr class="{% if u.is_banned %}banned-row{% endif %}">
+                        <td>
+                            <div class="user-name-cell">
+                                <span class="user-avatar {% if u.vip_level and u.vip_level > 0 %}vip-avatar{% endif %}">{{ u.username[0] | upper }}</span>
+                                <span>{{ u.username }}</span>
+                            </div>
+                        </td>
+                        <td>{{ u.email }}</td>
+                        <td>
+                            {% if u.vip_level and u.vip_level > 0 %}
+                            <span class="badge badge-vip">VIP {{ u.vip_level }}</span>
+                            {% else %}
+                            <span class="badge badge-info">普通</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ u.points or 0 }}</td>
+                        <td>
+                            {% if u.is_banned %}
+                            <span class="ban-status-tag ban-status-banned">已封禁</span>
+                            {% elif u.is_active %}
+                            <span class="badge badge-success">正常</span>
+                            {% else %}
+                            <span class="badge badge-warning">禁用</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ u.created_at }}</td>
+                        <td>
+                            <button class="btn btn-sm btn-primary" onclick="openUserModal({{ u.id }}, '{{ u.username }}', {{ u.vip_level or 0 }}, {{ u.points or 0 }}, {{ u.is_active or 0 }}, {{ u.is_banned or 0 }}, '{{ u.ban_reason or '' }}')">编辑</button>
+                            <button class="btn btn-sm btn-danger" onclick="toggleBanUser({{ u.id }}, '{{ u.username }}', {{ u.is_banned or 0 }})">{{ '解封' if u.is_banned else '封禁' }}</button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    {% else %}
+                    <tr>
+                        <td colspan="7" style="text-align: center; color: var(--text-muted); padding: 32px;">暂无用户数据</td>
+                    </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+        {% if total_pages > 1 %}
+        <div class="pagination">
+            {% if page > 1 %}
+            <a href="{{ url_for('admin.user_manage', page=page-1, search=search) }}">上一页</a>
+            {% endif %}
+            {% for p in range(1, total_pages + 1) %}
+            <a href="{{ url_for('admin.user_manage', page=p, search=search) }}" class="{% if p == page %}active{% endif %}">{{ p }}</a>
+            {% endfor %}
+            {% if page < total_pages %}
+            <a href="{{ url_for('admin.user_manage', page=page+1, search=search) }}">下一页</a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="modal-overlay" id="userModal" style="display: none;">
+    <div class="modal-box">
+        <h3>编辑用户</h3>
+        <form id="userForm" novalidate>
+            <input type="hidden" id="editUserId" value="">
+            <input type="hidden" id="editUserIsBanned" value="0">
+            <div class="modal-user-header">
+                <div class="modal-avatar" id="modalAvatar">U</div>
+                <div>
+                    <div class="modal-username" id="uUsername"></div>
+                    <div class="modal-user-id" id="uUserId"></div>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label" for="uVipLevel">VIP等级</label>
+                    <select id="uVipLevel" class="form-select">
+                        <option value="0">普通用户</option>
+                        <option value="1">VIP 1</option>
+                        <option value="2">VIP 2</option>
+                        <option value="3">VIP 3</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="uPoints">积分</label>
+                    <input type="number" id="uPoints" class="form-input" value="0" min="0">
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="uStatus">账号状态</label>
+                <select id="uStatus" class="form-select">
+                    <option value="1">正常</option>
+                    <option value="0">禁用</option>
+                </select>
+            </div>
+            <div class="ban-section">
+                <div class="ban-header">
+                    <span class="ban-label">封禁用户</span>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="uIsBanned" onchange="toggleBanReason()">
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+                <div id="banReasonGroup" style="display: none;">
+                    <label class="form-label" for="uBanReason">封禁理由</label>
+                    <textarea id="uBanReason" class="form-textarea" placeholder="请输入封禁理由..." rows="2"></textarea>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-outline" onclick="closeUserModal()">取消</button>
+                <button type="submit" class="btn btn-primary" id="userSubmitBtn">保存</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+(function() {
+    var userModal = document.getElementById('userModal');
+    var userForm = document.getElementById('userForm');
+    var editUserId = document.getElementById('editUserId');
+    var editUserIsBanned = document.getElementById('editUserIsBanned');
+    var submitBtn = document.getElementById('userSubmitBtn');
+
+    window.toggleBanReason = function() {
+        var banned = document.getElementById('uIsBanned').checked;
+        document.getElementById('banReasonGroup').style.display = banned ? 'block' : 'none';
+    };
+
+    window.openUserModal = function(userId, username, vipLevel, points, isActive, isBanned, banReason) {
+        userForm.reset();
+        editUserId.value = userId;
+        editUserIsBanned.value = isBanned || 0;
+        document.getElementById('uUsername').textContent = username;
+        document.getElementById('uUserId').textContent = 'ID: ' + userId;
+        document.getElementById('modalAvatar').textContent = username.charAt(0).toUpperCase();
+        document.getElementById('uVipLevel').value = vipLevel;
+        document.getElementById('uPoints').value = points;
+        document.getElementById('uStatus').value = isActive ? 1 : 0;
+        document.getElementById('uIsBanned').checked = isBanned == 1;
+        document.getElementById('uBanReason').value = banReason || '';
+        document.getElementById('banReasonGroup').style.display = (isBanned == 1) ? 'block' : 'none';
+        submitBtn.disabled = false;
+        submitBtn.textContent = '保存';
+        userModal.style.display = 'flex';
+    };
+
+    window.closeUserModal = function() { userModal.style.display = 'none'; userForm.reset(); editUserId.value = ''; editUserIsBanned.value = '0'; };
+    userModal.addEventListener('click', function(e) { if (e.target === userModal) closeUserModal(); });
+
+    userForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        var userId = editUserId.value;
+        if (!userId) return;
+        var data = {
+            vip_level: parseInt(document.getElementById('uVipLevel').value),
+            points: parseInt(document.getElementById('uPoints').value),
+            is_active: parseInt(document.getElementById('uStatus').value),
+            is_banned: document.getElementById('uIsBanned').checked ? 1 : 0,
+            ban_reason: document.getElementById('uBanReason').value.trim()
+        };
+        submitBtn.disabled = true;
+        submitBtn.textContent = '保存中...';
+        API.post('/admin/api/user/edit/' + userId, data).then(function(res) {
+            if (res.success) { Toast.success(res.message || '用户信息已更新'); closeUserModal(); setTimeout(function() { window.location.reload(); }, 500); }
+            else { Toast.error(res.message || '更新失败'); }
+            submitBtn.disabled = false; submitBtn.textContent = '保存';
+        }).catch(function() { Toast.error('网络错误'); submitBtn.disabled = false; submitBtn.textContent = '保存'; });
+    });
+
+    window.toggleBanUser = function(userId, username, isBanned) {
+        var action = isBanned ? '解封' : '封禁';
+        Modal.confirm(action + '用户', '确定要' + action + '用户 "' + username + '" 吗？', function() {
+            var data = { is_banned: isBanned ? 0 : 1, is_active: isBanned ? 1 : 0 };
+            API.post('/admin/api/user/edit/' + userId, data).then(function(res) {
+                if (res.success) { Toast.success(res.message || '操作成功'); setTimeout(function() { window.location.reload(); }, 500); }
+                else { Toast.error(res.message || '操作失败'); }
+            }).catch(function() { Toast.error('网络错误'); });
+        });
+    };
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#08080f">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="{{ site_name }}">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='uploads/images/app-icon-192.png') }}">
+    <meta name="csrf-token" content="{{ session.get('csrf_token', '') }}">
+    <title>{% block title %}{{ site_name }}{% endblock %}</title>
+    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    {% block head_extra %}{% endblock %}
+</head>
+<body>
+    <!-- 侧边栏遮罩层 -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <!-- 侧边栏导航 -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-head">
+            <span class="side-logo">{{ site_name }}</span>
+            <button class="sidebar-close" id="sidebarClose" aria-label="关闭菜单">&times;</button>
+        </div>
+
+        {% if g.user %}
+        <div class="sidebar-user">
+            <div class="su-avatar">{{ g.user.username[0] | upper }}</div>
+            <div>
+                <div class="su-name">{{ g.user.username }}</div>
+                <div class="su-lv" id="sideLv">Lv.1</div>
+            </div>
+        </div>
+        {% endif %}
+
+        <nav class="sidebar-nav">
+            <div class="sn-section">
+                <div class="sn-label">导航</div>
+                <a href="{{ url_for('main.index') }}" class="{% if request.path == '/' %}active{% endif %}">
+                    <span class="sn-icon">&#9672;</span> 首页
+                </a>
+                <a href="{{ url_for('main.announcement_list') }}">
+                    <span class="sn-icon">&#9678;</span> 公告
+                </a>
+                <a href="{{ url_for('main.feedback_page') }}">
+                    <span class="sn-icon">&#9702;</span> 反馈
+                </a>
+            </div>
+
+            <div class="sn-section">
+                <div class="sn-label">工具</div>
+                <a href="{{ url_for('main.card_redeem_page') }}">
+                    <span class="sn-icon">&#9679;</span> 邀请码兑换
+                </a>
+                {% if g.user %}
+                <a href="{{ url_for('main.user_center') }}">
+                    <span class="sn-icon">&#9670;</span> 我的
+                </a>
+                {% endif %}
+            </div>
+
+            {% if g.user and g.user.role == 'admin' %}
+            <div class="sn-section">
+                <div class="sn-label">管理</div>
+                <a href="{{ url_for('admin.dashboard') }}">
+                    <span class="sn-icon">&#9883;</span> 控制台
+                </a>
+            </div>
+            {% endif %}
+
+            {% if not g.user %}
+            <div class="sn-section">
+                <div class="sn-label">账户</div>
+                <a href="{{ url_for('auth.login_page') }}">
+                    <span class="sn-icon">&#9670;</span> 登录
+                </a>
+                <a href="{{ url_for('auth.register_page') }}">
+                    <span class="sn-icon">&#9672;</span> 注册
+                </a>
+            </div>
+            {% endif %}
+        </nav>
+
+        <div class="sidebar-footer">
+            &copy; {{ site_name }} &bull; v1.0
+        </div>
+    </aside>
+
+    <!-- 顶部固定导航栏：汉堡菜单 + Logo + 搜索 -->
+    <header class="app-header">
+        <button class="hamburger" id="hamburgerBtn" aria-label="打开菜单">
+            <span></span>
+            <span></span>
+            <span></span>
+        </button>
+        <a href="{{ url_for('main.index') }}" class="logo">{{ site_name }}</a>
+        <div class="header-search">
+            <form onsubmit="event.preventDefault(); window.location.href='{{ url_for('main.search') }}?q='+encodeURIComponent(this.querySelector('input').value)">
+                <input type="text" placeholder="搜索软件..." value="">
+            </form>
+        </div>
+        <div class="header-actions">
+            {% if g.user %}
+            {% if g.user.role == 'admin' %}
+            <a href="{{ url_for('admin.dashboard') }}">控制台</a>
+            {% endif %}
+            {% else %}
+            <a href="{{ url_for('auth.login_page') }}">登录</a>
+            {% endif %}
+        </div>
+    </header>
+
+    <!-- 主内容区域 -->
+    <main class="page-content">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- 底部固定导航栏 -->
+    <nav class="bottom-nav" id="bottomNav">
+        <a href="{{ url_for('main.index') }}" class="nav-tab-home">
+            <span class="nav-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                    <polyline points="9 22 9 12 15 12 15 22"/>
+                </svg>
+            </span>
+            <span>首页</span>
+        </a>
+        <a href="{{ url_for('main.user_center') }}" class="nav-tab-my">
+            <span class="nav-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                    <circle cx="12" cy="7" r="4"/>
+                </svg>
+            </span>
+            <span>我的</span>
+        </a>
+    </nav>
+
+    <!-- Toast 消息容器 -->
+    <div class="toast-container"></div>
+
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    <script>
+    // Service Worker 注册
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register("{{ url_for('static', filename='sw.js') }}");
+    }
+
+    // 侧边栏控制
+    (function() {
+        var sidebar = document.getElementById('sidebar');
+        var overlay = document.getElementById('sidebarOverlay');
+        var hamburger = document.getElementById('hamburgerBtn');
+        var closeBtn = document.getElementById('sidebarClose');
+
+        function openSidebar() {
+            sidebar.classList.add('active');
+            overlay.classList.add('active');
+            hamburger.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeSidebar() {
+            sidebar.classList.remove('active');
+            overlay.classList.remove('active');
+            hamburger.classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+        hamburger.addEventListener('click', function() {
+            if (sidebar.classList.contains('active')) {
+                closeSidebar();
+            } else {
+                openSidebar();
+            }
+        });
+
+        closeBtn.addEventListener('click', closeSidebar);
+        overlay.addEventListener('click', closeSidebar);
+
+        var touchStartX = 0;
+        sidebar.addEventListener('touchstart', function(e) {
+            touchStartX = e.touches[0].clientX;
+        });
+        sidebar.addEventListener('touchmove', function(e) {
+            var dx = e.touches[0].clientX - touchStartX;
+            if (dx < -40) {
+                closeSidebar();
+            }
+        });
+    })();
+
+    // 更新侧边栏等级
+    (function() {
+        var sideLv = document.getElementById('sideLv');
+        if (sideLv) {
+            API.get('/api/user/level').then(function(res) {
+                if (res.success) {
+                    sideLv.textContent = 'Lv.' + res.data.level;
+                }
+            }).catch(function() {});
+        }
+    })();
+
+    // 底部导航激活状态
+    (function() {
+        var currentPath = window.location.pathname;
+        var navLinks = document.querySelectorAll('#bottomNav a');
+        navLinks.forEach(function(link) {
+            link.classList.remove('active');
+            var href = link.getAttribute('href');
+            if (href === currentPath || (href !== '/' && currentPath.startsWith(href))) {
+                link.classList.add('active');
+            }
+        });
+        if (!document.querySelector('#bottomNav a.active')) {
+            var homeLink = document.querySelector('#bottomNav .nav-tab-home');
+            if (homeLink && (currentPath === '/' || currentPath === '')) {
+                homeLink.classList.add('active');
+            }
+        }
+    })();
+    </script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

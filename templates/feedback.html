@@ -1,0 +1,167 @@
+{% extends "base.html" %}
+{% block title %}用户反馈 - {{ site_name }}{% endblock %}
+
+{% block content %}
+<div class="detail-header">
+    <div style="position:relative;display:flex;align-items:center;gap:10px;text-align:left;max-width:320px;margin:0 auto;">
+        <div style="width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.85rem;font-weight:700;flex-shrink:0;
+                    background:linear-gradient(135deg,rgba(201,160,80,0.12),rgba(124,58,237,0.06));
+                    border:1px solid rgba(201,160,80,0.2);color:var(--gold);font-family:var(--font-display);">
+            FB
+        </div>
+        <div>
+            <h2 style="font-size:1.2rem;font-weight:700;margin:0;color:var(--text-primary);">用户反馈</h2>
+            <p style="font-size:0.75rem;color:var(--text-secondary);margin:4px 0 0 0;">告诉我们你的想法和建议</p>
+        </div>
+    </div>
+</div>
+
+{% if g.user %}
+<div style="margin:12px 14px;background:var(--glass-card);border-radius:var(--radius-md);padding:16px;border:1px solid var(--glass-border);">
+    <form id="feedbackForm" novalidate>
+        <div class="form-group">
+            <label class="form-label" for="feedbackTitle">反馈标题</label>
+            <input type="text" id="feedbackTitle" name="title" class="form-input"
+                   placeholder="请简要描述你的问题或建议" required maxlength="100">
+        </div>
+
+        <div class="form-group">
+            <label class="form-label" for="feedbackType">反馈类型</label>
+            <select id="feedbackType" name="type" class="form-select">
+                <option value="suggestion">建议</option>
+                <option value="problem">问题</option>
+                <option value="other">其他</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label" for="feedbackContent">反馈内容</label>
+            <textarea id="feedbackContent" name="content" class="form-textarea"
+                      placeholder="请详细描述你的反馈内容..." required minlength="10" rows="5"></textarea>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-block" id="submitFeedbackBtn">提交反馈</button>
+    </form>
+</div>
+
+<div style="padding:0 14px;margin-top:8px;">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+        <div style="width:4px;height:18px;background:var(--gold);border-radius:2px;"></div>
+        <span style="font-size:1rem;font-weight:700;font-family:var(--font-ui);">我的反馈记录</span>
+    </div>
+</div>
+<div id="feedbackList" style="padding:0 14px;">
+    <div class="loading-wrap" id="feedbackLoading">
+        <div class="spinner"></div>
+    </div>
+</div>
+{% else %}
+<div class="empty-state">
+    <div style="width:64px;height:64px;margin:0 auto 16px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.2rem;font-weight:700;color:var(--gold);
+                background:linear-gradient(135deg,rgba(201,160,80,0.08),rgba(124,58,237,0.04));
+                border:1px solid rgba(201,160,80,0.15);font-family:var(--font-display);">!</div>
+    <div class="empty-label">请先登录</div>
+    <p>登录后即可提交反馈和查看反馈记录</p>
+    <a href="{{ url_for('auth.login_page') }}" class="btn btn-primary" style="display:inline-block;margin-top:12px;">前往登录</a>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{% if g.user %}
+<script>
+(function() {
+    var typeMap = { 'suggestion': '建议', 'problem': '问题', 'other': '其他' };
+
+    function loadFeedbackList() {
+        var listEl = document.getElementById('feedbackList');
+        var loadingEl = document.getElementById('feedbackLoading');
+        loadingEl.style.display = 'flex';
+
+        API.get('/api/feedback/list')
+            .then(function(res) {
+                loadingEl.style.display = 'none';
+                if (res.success && res.data && res.data.length > 0) {
+                    var html = '';
+                    res.data.forEach(function(item) {
+                        var statusLabel = item.status === 'resolved' ? '已解决' : '待处理';
+                        var statusBg = item.status === 'resolved' ? '#D4F0D4' : '#FFE8B0';
+                        var statusColor = item.status === 'resolved' ? '#2D8F2F' : '#B87A00';
+                        var typeLabel = typeMap[item.type] || '其他';
+                        var adminReply = '';
+                        if (item.admin_reply) {
+                            adminReply = '<div style="margin-top:10px;padding:10px 12px;background:rgba(20,184,166,0.05);border-radius:var(--radius-xs);border-left:3px solid var(--arcane-teal);">' +
+                                '<div style="font-size:0.75rem;color:var(--arcane-teal);font-weight:600;margin-bottom:4px;">管理员回复</div>' +
+                                '<div style="font-size:0.85rem;color:var(--text-primary);">' + escapeHtml(item.admin_reply) + '</div>' +
+                                '</div>';
+                        }
+                        html += '<div style="background:var(--glass-card);border:1px solid var(--glass-border);border-radius:var(--radius-md);padding:14px 16px;margin-bottom:10px;">' +
+                            '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">' +
+                            '<div style="display:flex;align-items:center;gap:10px;">' +
+                            '<div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,rgba(201,160,80,0.1),rgba(124,58,237,0.06));display:flex;align-items:center;justify-content:center;color:var(--gold);font-size:0.75rem;font-weight:700;font-family:var(--font-display);">' + typeLabel[0] + '</div>' +
+                            '<span style="font-weight:600;font-size:0.9rem;color:var(--text-primary);">' + escapeHtml(item.title) + '</span>' +
+                            '</div>' +
+                            '<span style="display:inline-block;padding:2px 8px;border-radius:8px;font-size:0.68rem;font-weight:600;background:' + statusBg + ';color:' + statusColor + ';">' + statusLabel + '</span>' +
+                            '</div>' +
+                            '<div style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:6px;line-height:1.5;">' + escapeHtml(item.content) + '</div>' +
+                            '<div style="font-size:0.7rem;color:var(--text-muted);">' + formatDate(item.created_at) + '</div>' +
+                            adminReply +
+                            '</div>';
+                    });
+                    listEl.innerHTML = html;
+                } else {
+                    listEl.innerHTML = '<div class="empty-state"><p>暂无反馈记录</p></div>';
+                }
+            })
+            .catch(function() {
+                loadingEl.style.display = 'none';
+                listEl.innerHTML = '<div class="empty-state"><p>加载失败，请刷新重试</p></div>';
+            });
+    }
+
+    function escapeHtml(str) {
+        var div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
+    }
+
+    loadFeedbackList();
+
+    var feedbackForm = document.getElementById('feedbackForm');
+    var submitBtn = document.getElementById('submitFeedbackBtn');
+
+    feedbackForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        var title = document.getElementById('feedbackTitle').value.trim();
+        var type = document.getElementById('feedbackType').value;
+        var content = document.getElementById('feedbackContent').value.trim();
+
+        if (!title) { Toast.warning('请输入反馈标题'); return; }
+        if (!content || content.length < 10) { Toast.warning('反馈内容至少10个字符'); return; }
+
+        submitBtn.disabled = true;
+        submitBtn.textContent = '提交中...';
+
+        API.post('/api/feedback/submit', { title: title, type: type, content: content })
+            .then(function(res) {
+                if (res.success) {
+                    Toast.success(res.message || '反馈提交成功');
+                    feedbackForm.reset();
+                    loadFeedbackList();
+                } else {
+                    Toast.danger(res.message || '提交失败');
+                }
+                submitBtn.disabled = false;
+                submitBtn.textContent = '提交反馈';
+            })
+            .catch(function() {
+                Toast.danger('网络错误，请稍后重试');
+                submitBtn.disabled = false;
+                submitBtn.textContent = '提交反馈';
+            });
+    });
+})();
+</script>
+{% endif %}
+{% endblock %}

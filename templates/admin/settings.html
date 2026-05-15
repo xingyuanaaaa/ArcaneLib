@@ -1,0 +1,209 @@
+{% extends "base.html" %}
+{% block title %}系统设置 - 管理后台 - {{ site_name }}{% endblock %}
+{% block head_extra %}
+<style>
+    .admin-layout { display: flex; min-height: calc(100vh - var(--header-h)); padding-top: var(--header-h); }
+    .admin-sidebar { width: 220px; min-width: 220px; background: rgba(10, 10, 22, 0.92); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-right: 1px solid var(--glass-border); padding: 16px 0; position: fixed; top: var(--header-h); left: 0; bottom: 0; z-index: 900; overflow-y: auto; }
+    .admin-sidebar .sidebar-logo { font-family: var(--font-display); font-size: 1rem; font-weight: 700; color: var(--gold); padding: 0 18px 12px; margin-bottom: 6px; border-bottom: 1px solid var(--glass-border); letter-spacing: 2px; text-shadow: 0 0 14px var(--gold-glow); }
+    .admin-sidebar nav { display: flex; flex-direction: column; gap: 1px; padding: 0 8px; }
+    .admin-sidebar nav a { display: block; padding: 9px 14px; color: var(--text-secondary); text-decoration: none; font-size: 0.82rem; border-radius: var(--radius-sm); transition: all 0.25s; font-weight: 500; font-family: var(--font-ui); }
+    .admin-sidebar nav a:hover { background: var(--glass-hover); color: var(--text-gold); }
+    .admin-sidebar nav a.active { background: var(--glass-hover); color: var(--gold); font-weight: 600; border-left: 2px solid var(--gold); }
+    .admin-sidebar nav a.return-link { color: var(--text-muted); margin-top: 6px; border-top: 1px solid var(--glass-border); padding-top: 12px; font-size: 0.76rem; }
+    .admin-sidebar nav a.return-link:hover { color: var(--gold); }
+    .admin-main { flex: 1; margin-left: 220px; padding: 24px 28px; min-height: calc(100vh - var(--header-h)); }
+    .page-header { margin-bottom: 20px; }
+    .page-header h2 { font-family: var(--font-display); font-size: 1.2rem; font-weight: 700; color: var(--text-gold); letter-spacing: 1px; }
+    .settings-card { background: var(--glass-card); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border: 1px solid var(--glass-border); border-radius: var(--radius-md); padding: 22px; margin-bottom: 14px; }
+    .settings-card h3 { font-family: var(--font-display); font-size: 0.9rem; font-weight: 600; color: var(--gold); margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid var(--glass-border); letter-spacing: 1px; display: flex; align-items: center; gap: 8px; }
+    .settings-card h3 .card-icon { font-size: 1.1rem; }
+    .settings-row { display: flex; align-items: center; justify-content: space-between; padding: 11px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.03); }
+    .settings-row:last-child { border-bottom: none; }
+    .setting-info { flex: 1; min-width: 0; }
+    .setting-label { font-size: 0.86rem; font-weight: 500; color: var(--text-primary); font-family: var(--font-ui); }
+    .setting-desc { font-size: 0.72rem; color: var(--text-muted); margin-top: 2px; }
+    .toggle-switch { position: relative; display: inline-block; width: 46px; height: 24px; flex-shrink: 0; }
+    .toggle-switch input { opacity: 0; width: 0; height: 0; }
+    .toggle-slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(255, 255, 255, 0.06); transition: 0.3s; border-radius: 24px; border: 1px solid var(--glass-border); }
+    .toggle-slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 2px; bottom: 2px; background-color: var(--text-secondary); transition: 0.3s; border-radius: 50%; }
+    .toggle-switch input:checked + .toggle-slider { background-color: rgba(201,160,80,0.2); border-color: var(--gold); }
+    .toggle-switch input:checked + .toggle-slider:before { transform: translateX(22px); background-color: var(--gold); box-shadow: 0 0 8px var(--gold-glow); }
+    .save-bar { display: flex; align-items: center; gap: 12px; margin-top: 20px; padding: 14px 18px; background: var(--glass-card); border: 1px solid var(--glass-border); border-radius: var(--radius-md); }
+    .save-bar .save-hint { font-size: 0.74rem; color: var(--text-muted); }
+    .btn-with-spinner { display: flex; align-items: center; gap: 8px; }
+    .btn-spinner {
+        display: none;
+        width: 16px;
+        height: 16px;
+        border: 2px solid rgba(201,160,80,0.2);
+        border-top-color: var(--gold);
+        border-radius: 50%;
+        animation: spin 0.6s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .btn-primary.loading .btn-spinner { display: inline-block; }
+    .btn-primary.loading { pointer-events: none; opacity: 0.8; }
+
+    @media (max-width: 768px) {
+        .admin-sidebar { position: fixed; top: auto; bottom: 0; left: 0; right: 0; width: 100%; min-width: 100%; height: auto; padding: 0; border-right: none; border-top: 1px solid var(--glass-border); overflow-x: auto; overflow-y: hidden; z-index: 950; }
+        .admin-sidebar .sidebar-logo { display: none; }
+        .admin-sidebar nav { flex-direction: row; padding: 6px 10px; gap: 3px; white-space: nowrap; flex-wrap: nowrap; }
+        .admin-sidebar nav a { padding: 7px 12px; font-size: 0.72rem; border-radius: 16px; flex-shrink: 0; }
+        .admin-sidebar nav a.active { border-left: none; border: 1px solid var(--gold); }
+        .admin-sidebar nav a.return-link { border-top: none; margin-top: 0; padding-top: 7px; margin-left: 4px; }
+        .admin-main { margin-left: 0; padding: 16px 14px 90px; }
+    }
+</style>
+{% endblock %}
+{% block content %}
+<div class="admin-layout">
+    <aside class="admin-sidebar">
+        <div class="sidebar-logo">{{ site_name }}</div>
+        <nav>
+            <a href="{{ url_for('admin.dashboard') }}">仪表盘</a>
+            <a href="{{ url_for('admin.software_manage') }}">软件管理</a>
+            <a href="{{ url_for('admin.category_manage') }}">分类管理</a>
+            <a href="{{ url_for('admin.user_manage') }}">用户管理</a>
+            <a href="{{ url_for('admin.card_manage') }}">邀请码管理</a>
+            <a href="{{ url_for('admin.announcement_manage') }}">公告管理</a>
+            <a href="{{ url_for('admin.feedback_manage') }}">反馈管理</a>
+            <a href="{{ url_for('admin.ad_manage') }}">广告管理</a>
+            <a href="{{ url_for('admin.download_stats') }}">下载统计</a>
+            <a href="{{ url_for('admin.settings') }}" class="active">系统设置</a>
+            <a href="{{ url_for('main.index') }}" class="return-link">返回前台</a>
+        </nav>
+    </aside>
+    <div class="admin-main">
+        <div class="page-header">
+            <h2>系统设置</h2>
+        </div>
+        <div class="settings-card">
+            <h3><span class="card-icon">&#9881;</span> 基本设置</h3>
+            <div class="form-group">
+                <label class="form-label" for="siteName">网站名称</label>
+                <input type="text" id="siteName" class="form-input" placeholder="请输入网站名称">
+                <div class="setting-desc" style="margin-top: 3px;">显示在浏览器标题栏和页面头部</div>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="siteDescription">网站描述</label>
+                <textarea id="siteDescription" class="form-textarea" placeholder="请输入网站描述" rows="2"></textarea>
+                <div class="setting-desc" style="margin-top: 3px;">用于SEO和网站简介</div>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="siteKeywords">网站关键词</label>
+                <input type="text" id="siteKeywords" class="form-input" placeholder="多个关键词用逗号分隔">
+                <div class="setting-desc" style="margin-top: 3px;">用于搜索引擎优化，多个关键词用英文逗号分隔</div>
+            </div>
+        </div>
+        <div class="settings-card">
+            <h3><span class="card-icon">&#9889;</span> 功能开关</h3>
+            <div class="settings-row">
+                <div class="setting-info">
+                    <div class="setting-label">允许注册</div>
+                    <div class="setting-desc">关闭后新用户将无法注册账号</div>
+                </div>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="allowRegister" checked>
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+            <div class="settings-row">
+                <div class="setting-info">
+                    <div class="setting-label">维护模式</div>
+                    <div class="setting-desc">开启后仅管理员可访问网站，普通用户将看到维护提示</div>
+                </div>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="maintenanceMode">
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+        </div>
+        <div class="settings-card">
+            <h3><span class="card-icon">&#128274;</span> 安全设置</h3>
+            <div class="settings-row">
+                <div class="setting-info">
+                    <div class="setting-label">启用下载验证码</div>
+                    <div class="setting-desc">下载软件前需要输入验证码，防止恶意下载</div>
+                </div>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="downloadCaptcha">
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+        </div>
+        <div class="save-bar">
+            <button class="btn btn-primary btn-lg btn-with-spinner" id="saveSettingsBtn" onclick="saveSettings()">
+                <span class="btn-spinner"></span>
+                <span class="btn-text">保存设置</span>
+            </button>
+            <span class="save-hint" id="saveHint"></span>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+(function() {
+    function loadSettings() {
+        {% if configs %}
+        var configMap = {};
+        {% for cfg in configs %}
+        configMap[{{ cfg.config_key | tojson }}] = {{ cfg.config_value | tojson }};
+        {% endfor %}
+        if (configMap.site_name) document.getElementById('siteName').value = configMap.site_name;
+        if (configMap.site_description) document.getElementById('siteDescription').value = configMap.site_description;
+        if (configMap.site_keywords) document.getElementById('siteKeywords').value = configMap.site_keywords;
+        if (configMap.allow_register !== undefined) document.getElementById('allowRegister').checked = configMap.allow_register === '1' || configMap.allow_register === 1;
+        if (configMap.maintenance_mode !== undefined) document.getElementById('maintenanceMode').checked = configMap.maintenance_mode === '1' || configMap.maintenance_mode === 1;
+        if (configMap.download_captcha !== undefined) document.getElementById('downloadCaptcha').checked = configMap.download_captcha === '1' || configMap.download_captcha === 1;
+        {% else %}
+        API.get('/admin/api/config/list').then(function(res) {
+            if (res.success && res.data) {
+                var cfg = res.data;
+                if (cfg.site_name) document.getElementById('siteName').value = cfg.site_name;
+                if (cfg.site_description) document.getElementById('siteDescription').value = cfg.site_description;
+                if (cfg.site_keywords) document.getElementById('siteKeywords').value = cfg.site_keywords;
+                if (cfg.allow_register !== undefined) document.getElementById('allowRegister').checked = cfg.allow_register === '1' || cfg.allow_register === true;
+                if (cfg.maintenance_mode !== undefined) document.getElementById('maintenanceMode').checked = cfg.maintenance_mode === '1' || cfg.maintenance_mode === true;
+                if (cfg.download_captcha !== undefined) document.getElementById('downloadCaptcha').checked = cfg.download_captcha === '1' || cfg.download_captcha === true;
+            }
+        }).catch(function() {});
+        {% endif %}
+    }
+
+    window.saveSettings = function() {
+        var configs = {
+            site_name: document.getElementById('siteName').value.trim(),
+            site_description: document.getElementById('siteDescription').value.trim(),
+            site_keywords: document.getElementById('siteKeywords').value.trim(),
+            allow_register: document.getElementById('allowRegister').checked ? '1' : '0',
+            maintenance_mode: document.getElementById('maintenanceMode').checked ? '1' : '0',
+            download_captcha: document.getElementById('downloadCaptcha').checked ? '1' : '0'
+        };
+        var btn = document.getElementById('saveSettingsBtn');
+        var hint = document.getElementById('saveHint');
+        btn.classList.add('loading');
+        btn.querySelector('.btn-text').textContent = '保存中...';
+        hint.textContent = '';
+        API.post('/admin/api/config/update', { configs: configs }).then(function(res) {
+            if (res.success) {
+                Toast.success(res.message || '设置已保存');
+                hint.textContent = '已保存';
+                hint.style.color = 'var(--arcane-teal)';
+                setTimeout(function() { hint.textContent = ''; }, 2000);
+            } else {
+                Toast.error(res.message || '保存失败');
+            }
+            btn.classList.remove('loading');
+            btn.querySelector('.btn-text').textContent = '保存设置';
+        }).catch(function() {
+            Toast.error('网络错误');
+            btn.classList.remove('loading');
+            btn.querySelector('.btn-text').textContent = '保存设置';
+        });
+    };
+
+    loadSettings();
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,220 @@
+{% extends "base.html" %}
+
+{% block title %}注册 - {{ site_name }}{% endblock %}
+
+{% block head_extra %}
+<style>
+    .auth-card {
+        box-shadow: 0 8px 40px rgba(124, 58, 237, 0.1), 0 2px 12px rgba(201, 160, 80, 0.08), 0 0 80px rgba(201, 160, 80, 0.04);
+    }
+    .auth-card .auth-logo h1 {
+        font-size: 1.6rem;
+        letter-spacing: 4px;
+        color: var(--gold);
+        text-shadow: 0 0 24px var(--gold-glow), 0 0 48px rgba(201, 160, 80, 0.1);
+    }
+    .btn-auth {
+        margin-top: 10px;
+        height: 46px;
+        font-size: 0.95rem;
+        letter-spacing: 3px;
+        border-radius: 23px;
+        transition: all 0.3s;
+    }
+    .btn-auth:active {
+        transform: scale(0.97);
+        opacity: 0.85;
+    }
+    .btn-auth:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+    .auth-footer {
+        text-align: center;
+        margin-top: 28px;
+        font-size: 0.84rem;
+        color: var(--text-muted);
+    }
+    .auth-footer a {
+        color: var(--gold);
+        font-weight: 600;
+        text-decoration: none;
+        transition: all 0.25s;
+    }
+    .auth-footer a:hover {
+        color: var(--gold-bright);
+        text-shadow: 0 0 12px var(--gold-glow);
+    }
+    .auth-back {
+        text-align: center;
+        margin-top: 16px;
+        font-size: 0.78rem;
+    }
+    .auth-back a {
+        color: var(--text-muted);
+        text-decoration: none;
+        transition: color 0.25s;
+    }
+    .auth-back a:hover {
+        color: var(--text-gold);
+    }
+    .form-input[readonly] {
+        cursor: default;
+        color: var(--text-muted);
+        border-style: dashed;
+    }
+    .form-label small {
+        color: var(--text-muted);
+        font-weight: 400;
+        font-size: 0.78rem;
+    }
+    .auth-hint {
+        text-align: center;
+        font-size: 0.82rem;
+        color: var(--gold);
+        margin-bottom: 20px;
+        padding: 10px 14px;
+        background: rgba(201, 160, 80, 0.08);
+        border-radius: 8px;
+        border: 1px solid rgba(201, 160, 80, 0.15);
+        line-height: 1.6;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="auth-page">
+    <div class="auth-card">
+        <div class="auth-logo">
+            <h1>Arcane库</h1>
+            <p>创建新账号</p>
+        </div>
+
+        <div class="auth-hint">注册需要有效邀请码，如需获取邀请码请联系管理员或购买</div>
+
+        <form id="registerForm" novalidate>
+            <div class="form-group">
+                <label class="form-label" for="username">用户名</label>
+                <input type="text" id="username" name="username" class="form-input"
+                       placeholder="3-20位，支持中英文、数字和下划线"
+                       autocomplete="username" required autofocus maxlength="20">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="password">密码</label>
+                <input type="password" id="password" name="password" class="form-input"
+                       placeholder="至少6位密码" autocomplete="new-password" required minlength="6">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="inviteCode">邀请码 <small>(必填)</small></label>
+                <input type="text" id="inviteCode" name="invite_code" class="form-input"
+                       placeholder="输入邀请码（必填）" autocomplete="off" required>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="email">邮箱 <small>(选填)</small></label>
+                <input type="email" id="email" name="email" class="form-input"
+                       placeholder="请输入邮箱地址" autocomplete="email">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="machine_code">机器码 <small>(自动获取)</small></label>
+                <input type="text" id="machine_code" name="machine_code" class="form-input"
+                       placeholder="正在获取机器码..." readonly>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-block btn-auth" id="registerBtn">注册</button>
+        </form>
+
+        <div class="auth-footer">
+            已有账号？
+            <a href="{{ url_for('auth.login_page') }}">去登录</a>
+        </div>
+
+        <div class="auth-back">
+            <a href="{{ url_for('main.index') }}">返回首页</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var registerForm = document.getElementById('registerForm');
+    var registerBtn = document.getElementById('registerBtn');
+    var machineCodeInput = document.getElementById('machine_code');
+
+    if (typeof getMachineCode === 'function') {
+        getMachineCode().then(function(code) {
+            machineCodeInput.value = code || 'UNKNOWN_MACHINE_CODE';
+        }).catch(function() {
+            machineCodeInput.value = 'UNKNOWN_MACHINE_CODE';
+        });
+    } else {
+        machineCodeInput.value = 'UNKNOWN_MACHINE_CODE';
+        machineCodeInput.placeholder = '机器码获取失败';
+    }
+
+    registerForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        var username = document.getElementById('username').value.trim();
+        var password = document.getElementById('password').value;
+        var inviteCode = document.getElementById('inviteCode').value.trim();
+        var email = document.getElementById('email').value.trim();
+        var machineCode = machineCodeInput.value;
+
+        if (!username) {
+            Toast.warning('请输入用户名');
+            return;
+        }
+        if (username.length < 3) {
+            Toast.warning('用户名至少3位');
+            return;
+        }
+        if (!password) {
+            Toast.warning('请输入密码');
+            return;
+        }
+        if (password.length < 6) {
+            Toast.warning('密码至少6位');
+            return;
+        }
+        if (!inviteCode) {
+            Toast.warning('请输入邀请码');
+            return;
+        }
+
+        registerBtn.disabled = true;
+        registerBtn.textContent = '注册中...';
+
+        API.post('/api/register', {
+            username: username,
+            password: password,
+            email: email,
+            machine_code: machineCode,
+            invite_code: inviteCode
+        })
+        .then(function(res) {
+            if (res.success) {
+                Toast.success(res.message || '注册成功，即将跳转到登录页');
+                setTimeout(function() {
+                    window.location.href = '/login';
+                }, 1500);
+            } else {
+                Toast.error(res.message || '注册失败');
+                registerBtn.disabled = false;
+                registerBtn.textContent = '注册';
+            }
+        })
+        .catch(function(err) {
+            Toast.error('网络错误，请稍后重试');
+            registerBtn.disabled = false;
+            registerBtn.textContent = '注册';
+        });
+    });
+});
+</script>
+{% endblock %}

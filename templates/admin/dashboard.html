@@ -1,0 +1,248 @@
+{% extends "base.html" %}
+{% block title %}仪表盘 - 管理后台 - {{ site_name }}{% endblock %}
+{% block head_extra %}
+<style>
+    .admin-layout { display: flex; min-height: calc(100vh - var(--header-h)); padding-top: var(--header-h); }
+    .admin-sidebar { width: 220px; min-width: 220px; background: rgba(10, 10, 22, 0.92); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-right: 1px solid var(--glass-border); padding: 16px 0; position: fixed; top: var(--header-h); left: 0; bottom: 0; z-index: 900; overflow-y: auto; }
+    .admin-sidebar .sidebar-logo { font-family: var(--font-display); font-size: 1rem; font-weight: 700; color: var(--gold); padding: 0 18px 12px; margin-bottom: 6px; border-bottom: 1px solid var(--glass-border); letter-spacing: 2px; text-shadow: 0 0 14px var(--gold-glow); }
+    .admin-sidebar nav { display: flex; flex-direction: column; gap: 1px; padding: 0 8px; }
+    .admin-sidebar nav a { display: block; padding: 9px 14px; color: var(--text-secondary); text-decoration: none; font-size: 0.82rem; border-radius: var(--radius-sm); transition: all 0.25s; font-weight: 500; font-family: var(--font-ui); }
+    .admin-sidebar nav a:hover { background: var(--glass-hover); color: var(--text-gold); }
+    .admin-sidebar nav a.active { background: var(--glass-hover); color: var(--gold); font-weight: 600; border-left: 2px solid var(--gold); }
+    .admin-sidebar nav a.return-link { color: var(--text-muted); margin-top: 6px; border-top: 1px solid var(--glass-border); padding-top: 12px; font-size: 0.76rem; }
+    .admin-sidebar nav a.return-link:hover { color: var(--gold); }
+    .admin-main { flex: 1; margin-left: 220px; padding: 24px 28px; min-height: calc(100vh - var(--header-h)); }
+    .admin-table { background: var(--glass-card); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border: 1px solid var(--glass-border); border-radius: var(--radius-md); overflow: hidden; margin-bottom: 20px; }
+    .admin-table table { width: 100%; border-collapse: collapse; }
+    .admin-table thead th { font-family: var(--font-display); font-size: 0.68rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1.5px; padding: 12px 14px; text-align: left; border-bottom: 1px solid var(--glass-border); background: rgba(0, 0, 0, 0.15); }
+    .admin-table tbody td { padding: 11px 14px; font-size: 0.84rem; color: var(--text-primary); border-bottom: 1px solid rgba(255, 255, 255, 0.03); font-family: var(--font-ui); }
+    .admin-table tbody tr:hover { background: var(--glass-hover); }
+    .admin-table tbody tr:last-child td { border-bottom: none; }
+    .page-header { margin-bottom: 20px; }
+    .page-header h2 { font-family: var(--font-display); font-size: 1.2rem; font-weight: 700; color: var(--text-gold); letter-spacing: 1px; }
+    .section-title { font-family: var(--font-display); font-size: 0.8rem; font-weight: 600; color: var(--text-gold); margin-bottom: 10px; padding-left: 10px; border-left: 3px solid var(--gold); letter-spacing: 1px; }
+
+    .stat-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 14px; margin-bottom: 22px; }
+    .stat-card {
+        background: var(--glass-card);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid var(--glass-border);
+        border-radius: var(--radius-md);
+        padding: 20px 18px;
+        position: relative;
+        overflow: hidden;
+        transition: all 0.3s ease;
+    }
+    .stat-card::before {
+        content: '';
+        position: absolute;
+        top: -30px;
+        right: -30px;
+        width: 100px;
+        height: 100px;
+        border-radius: 50%;
+        opacity: 0.08;
+        transition: all 0.4s ease;
+    }
+    .stat-card:hover { transform: translateY(-3px); }
+    .stat-card:hover::before { opacity: 0.14; transform: scale(1.2); }
+    .stat-card .stat-icon {
+        font-size: 1.5rem;
+        margin-bottom: 8px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .stat-card .stat-icon svg { width: 28px; height: 28px; flex-shrink: 0; }
+    .stat-card .stat-value { font-size: 1.8rem; font-weight: 700; font-family: var(--font-display); line-height: 1.1; }
+    .stat-card .stat-label { font-size: 0.72rem; color: var(--text-muted); margin-top: 4px; font-family: var(--font-ui); letter-spacing: 0.5px; }
+    .stat-card-purple { border-color: rgba(124, 58, 237, 0.25); box-shadow: 0 0 20px rgba(124, 58, 237, 0.06), inset 0 0 30px rgba(124, 58, 237, 0.02); }
+    .stat-card-purple::before { background: var(--arcane-purple); }
+    .stat-card-purple .stat-value { color: #a78bfa; text-shadow: 0 0 14px rgba(124, 58, 237, 0.4); }
+    .stat-card-purple .stat-icon svg { color: #a78bfa; }
+    .stat-card-gold { border-color: rgba(201, 160, 80, 0.25); box-shadow: 0 0 20px rgba(201, 160, 80, 0.06), inset 0 0 30px rgba(201, 160, 80, 0.02); }
+    .stat-card-gold::before { background: var(--gold); }
+    .stat-card-gold .stat-value { color: var(--gold); text-shadow: 0 0 14px var(--gold-glow); }
+    .stat-card-gold .stat-icon svg { color: var(--gold); }
+    .stat-card-cyan { border-color: rgba(20, 184, 166, 0.25); box-shadow: 0 0 20px rgba(20, 184, 166, 0.06), inset 0 0 30px rgba(20, 184, 166, 0.02); }
+    .stat-card-cyan::before { background: var(--arcane-teal); }
+    .stat-card-cyan .stat-value { color: var(--arcane-teal); text-shadow: 0 0 14px rgba(20, 184, 166, 0.4); }
+    .stat-card-cyan .stat-icon svg { color: var(--arcane-teal); }
+    .stat-card-pink { border-color: rgba(236, 72, 153, 0.25); box-shadow: 0 0 20px rgba(236, 72, 153, 0.06), inset 0 0 30px rgba(236, 72, 153, 0.02); }
+    .stat-card-pink::before { background: #ec4899; }
+    .stat-card-pink .stat-value { color: #f472b6; text-shadow: 0 0 14px rgba(236, 72, 153, 0.4); }
+    .stat-card-pink .stat-icon svg { color: #f472b6; }
+    .stat-card-indigo { border-color: rgba(99, 102, 241, 0.25); box-shadow: 0 0 20px rgba(99, 102, 241, 0.06), inset 0 0 30px rgba(99, 102, 241, 0.02); }
+    .stat-card-indigo::before { background: #6366f1; }
+    .stat-card-indigo .stat-value { color: #818cf8; text-shadow: 0 0 14px rgba(99, 102, 241, 0.4); }
+    .stat-card-indigo .stat-icon svg { color: #818cf8; }
+    .stat-card-amber { border-color: rgba(245, 158, 11, 0.25); box-shadow: 0 0 20px rgba(245, 158, 11, 0.06), inset 0 0 30px rgba(245, 158, 11, 0.02); }
+    .stat-card-amber::before { background: #f59e0b; }
+    .stat-card-amber .stat-value { color: #fbbf24; text-shadow: 0 0 14px rgba(245, 158, 11, 0.4); }
+    .stat-card-amber .stat-icon svg { color: #fbbf24; }
+
+    .quick-actions { display: flex; gap: 10px; margin-bottom: 22px; flex-wrap: wrap; }
+    .quick-action-btn {
+        display: inline-flex; align-items: center; gap: 7px;
+        padding: 10px 18px;
+        background: var(--glass-card);
+        border: 1px solid var(--glass-border);
+        border-radius: var(--radius-sm);
+        color: var(--text-primary);
+        font-family: var(--font-ui);
+        font-size: 0.82rem;
+        text-decoration: none;
+        cursor: pointer;
+        transition: all 0.25s ease;
+    }
+    .quick-action-btn:hover { border-color: var(--gold); color: var(--gold); background: var(--glass-hover); transform: translateY(-2px); box-shadow: 0 4px 16px rgba(0,0,0,0.3); }
+    .quick-action-btn svg { width: 16px; height: 16px; flex-shrink: 0; }
+
+    @media (max-width: 768px) {
+        .admin-sidebar { position: fixed; top: auto; bottom: 0; left: 0; right: 0; width: 100%; min-width: 100%; height: auto; padding: 0; border-right: none; border-top: 1px solid var(--glass-border); overflow-x: auto; overflow-y: hidden; z-index: 950; }
+        .admin-sidebar .sidebar-logo { display: none; }
+        .admin-sidebar nav { flex-direction: row; padding: 6px 10px; gap: 3px; white-space: nowrap; flex-wrap: nowrap; }
+        .admin-sidebar nav a { padding: 7px 12px; font-size: 0.72rem; border-radius: 16px; flex-shrink: 0; }
+        .admin-sidebar nav a.active { border-left: none; border: 1px solid var(--gold); }
+        .admin-sidebar nav a.return-link { border-top: none; margin-top: 0; padding-top: 7px; margin-left: 4px; }
+        .admin-main { margin-left: 0; padding: 16px 14px 90px; }
+        .stat-cards { grid-template-columns: repeat(2, 1fr); }
+        .quick-actions { flex-direction: column; }
+        .quick-action-btn { justify-content: center; }
+    }
+</style>
+{% endblock %}
+{% block content %}
+<div class="admin-layout">
+    <aside class="admin-sidebar">
+        <div class="sidebar-logo">{{ site_name }}</div>
+        <nav>
+            <a href="{{ url_for('admin.dashboard') }}" class="active">仪表盘</a>
+            <a href="{{ url_for('admin.software_manage') }}">软件管理</a>
+            <a href="{{ url_for('admin.category_manage') }}">分类管理</a>
+            <a href="{{ url_for('admin.user_manage') }}">用户管理</a>
+            <a href="{{ url_for('admin.card_manage') }}">邀请码管理</a>
+            <a href="{{ url_for('admin.announcement_manage') }}">公告管理</a>
+            <a href="{{ url_for('admin.feedback_manage') }}">反馈管理</a>
+            <a href="{{ url_for('admin.ad_manage') }}">广告管理</a>
+            <a href="{{ url_for('admin.download_stats') }}">下载统计</a>
+            <a href="{{ url_for('admin.settings') }}">系统设置</a>
+            <a href="{{ url_for('main.index') }}" class="return-link">返回前台</a>
+        </nav>
+    </aside>
+    <div class="admin-main">
+        <div class="page-header">
+            <h2>仪表盘</h2>
+        </div>
+
+        <div class="stat-cards">
+            <div class="stat-card stat-card-purple">
+                <div class="stat-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                </div>
+                <div class="stat-value">{{ stats.software_count }}</div>
+                <div class="stat-label">软件总数</div>
+            </div>
+            <div class="stat-card stat-card-gold">
+                <div class="stat-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                </div>
+                <div class="stat-value">{{ stats.user_count }}</div>
+                <div class="stat-label">用户总数</div>
+            </div>
+            <div class="stat-card stat-card-cyan">
+                <div class="stat-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                </div>
+                <div class="stat-value">{{ stats.normal_user_count }}</div>
+                <div class="stat-label">正常用户</div>
+            </div>
+            <div class="stat-card stat-card-amber">
+                <div class="stat-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/><polyline points="17 8 19 10 23 6"/></svg>
+                </div>
+                <div class="stat-value">{{ stats.vip_user_count }}</div>
+                <div class="stat-label">VIP用户</div>
+            </div>
+            <div class="stat-card stat-card-pink">
+                <div class="stat-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                </div>
+                <div class="stat-value">{{ stats.download_total }}</div>
+                <div class="stat-label">总下载量</div>
+            </div>
+            <div class="stat-card stat-card-indigo">
+                <div class="stat-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                </div>
+                <div class="stat-value">{{ stats.today_downloads }}</div>
+                <div class="stat-label">今日下载</div>
+            </div>
+            <div class="stat-card stat-card-cyan">
+                <div class="stat-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                </div>
+                <div class="stat-value">{{ stats.card_count }}</div>
+                <div class="stat-label">未使用邀请码</div>
+            </div>
+            <div class="stat-card stat-card-pink">
+                <div class="stat-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+                </div>
+                <div class="stat-value">{{ stats.feedback_pending }}</div>
+                <div class="stat-label">待处理反馈</div>
+            </div>
+        </div>
+
+        <div class="quick-actions">
+            <a href="{{ url_for('admin.software_manage') }}" class="quick-action-btn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                添加软件
+            </a>
+            <a href="{{ url_for('admin.card_manage') }}" class="quick-action-btn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg>
+                生成邀请码
+            </a>
+            <a href="{{ url_for('admin.user_manage') }}" class="quick-action-btn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
+                管理用户
+            </a>
+            <a href="{{ url_for('admin.feedback_manage') }}" class="quick-action-btn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                查看反馈
+            </a>
+        </div>
+
+        <div class="section-title">最近下载记录</div>
+        <div class="admin-table">
+            <table>
+                <thead>
+                    <tr>
+                        <th>用户</th>
+                        <th>软件名称</th>
+                        <th>IP地址</th>
+                        <th>下载时间</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if recent_downloads %}
+                    {% for dl in recent_downloads %}
+                    <tr>
+                        <td>{{ dl.username or '未知用户' }}</td>
+                        <td>{{ dl.software_name }}</td>
+                        <td>{{ dl.ip_address }}</td>
+                        <td>{{ dl.downloaded_at }}</td>
+                    </tr>
+                    {% endfor %}
+                    {% else %}
+                    <tr>
+                        <td colspan="4" style="text-align: center; color: var(--text-muted); padding: 32px;">暂无下载记录</td>
+                    </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

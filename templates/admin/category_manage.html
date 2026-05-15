@@ -1,0 +1,188 @@
+{% extends "base.html" %}
+{% block title %}分类管理 - 管理后台 - {{ site_name }}{% endblock %}
+{% block head_extra %}
+<style>
+    .admin-layout { display: flex; min-height: calc(100vh - var(--header-h)); padding-top: var(--header-h); }
+    .admin-sidebar { width: 220px; min-width: 220px; background: rgba(10, 10, 22, 0.92); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-right: 1px solid var(--glass-border); padding: 16px 0; position: fixed; top: var(--header-h); left: 0; bottom: 0; z-index: 900; overflow-y: auto; }
+    .admin-sidebar .sidebar-logo { font-family: var(--font-display); font-size: 1rem; font-weight: 700; color: var(--gold); padding: 0 18px 12px; margin-bottom: 6px; border-bottom: 1px solid var(--glass-border); letter-spacing: 2px; text-shadow: 0 0 14px var(--gold-glow); }
+    .admin-sidebar nav { display: flex; flex-direction: column; gap: 1px; padding: 0 8px; }
+    .admin-sidebar nav a { display: block; padding: 9px 14px; color: var(--text-secondary); text-decoration: none; font-size: 0.82rem; border-radius: var(--radius-sm); transition: all 0.25s; font-weight: 500; font-family: var(--font-ui); }
+    .admin-sidebar nav a:hover { background: var(--glass-hover); color: var(--text-gold); }
+    .admin-sidebar nav a.active { background: var(--glass-hover); color: var(--gold); font-weight: 600; border-left: 2px solid var(--gold); }
+    .admin-sidebar nav a.return-link { color: var(--text-muted); margin-top: 6px; border-top: 1px solid var(--glass-border); padding-top: 12px; font-size: 0.76rem; }
+    .admin-sidebar nav a.return-link:hover { color: var(--gold); }
+    .admin-main { flex: 1; margin-left: 220px; padding: 24px 28px; min-height: calc(100vh - var(--header-h)); }
+    .page-header { margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; }
+    .page-header h2 { font-family: var(--font-display); font-size: 1.2rem; font-weight: 700; color: var(--text-gold); letter-spacing: 1px; }
+
+    .cat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; margin-bottom: 20px; }
+    .cat-card { background: var(--glass-card); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border: 1px solid var(--glass-border); border-radius: var(--radius-md); padding: 18px; transition: all 0.25s; position: relative; overflow: hidden; }
+    .cat-card:hover { border-color: rgba(201,160,80,0.25); transform: translateY(-1px); }
+    .cat-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, var(--arcane-purple), var(--gold), transparent); opacity: 0; transition: opacity 0.3s; }
+    .cat-card:hover::before { opacity: 1; }
+    .cat-card .cat-name { font-size: 1rem; font-weight: 700; color: var(--text-primary); font-family: var(--font-ui); margin-bottom: 6px; }
+    .cat-card .cat-desc { font-size: 0.76rem; color: var(--text-muted); margin-bottom: 10px; line-height: 1.5; font-style: italic; }
+    .cat-card .cat-meta { display: flex; align-items: center; gap: 14px; font-size: 0.72rem; color: var(--text-secondary); margin-bottom: 12px; }
+    .cat-card .cat-count { background: rgba(124,58,237,0.1); color: #a78bfa; padding: 2px 10px; border-radius: 10px; font-weight: 600; font-size: 0.7rem; }
+    .cat-card .cat-status { padding: 2px 8px; border-radius: 8px; font-size: 0.68rem; font-weight: 600; }
+    .cat-status-active { background: rgba(20,184,166,0.1); color: var(--arcane-teal); }
+    .cat-status-inactive { background: rgba(155,44,44,0.1); color: #e88181; }
+    .cat-card .cat-actions { display: flex; gap: 6px; }
+
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 2000; display: flex; align-items: center; justify-content: center; animation: fadeIn 0.2s ease; }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    .modal-box { background: var(--glass-bg); backdrop-filter: blur(28px) saturate(180%); -webkit-backdrop-filter: blur(28px) saturate(180%); border: 1px solid rgba(201,160,80,0.15); border-radius: var(--radius-xl); padding: 28px; width: 420px; max-width: 92vw; animation: slideUp 0.3s ease; }
+    @keyframes slideUp { from { transform: translateY(30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    .modal-box h3 { font-family: var(--font-display); font-size: 1rem; color: var(--gold); margin-bottom: 18px; letter-spacing: 1px; }
+    .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 20px; }
+
+    @media (max-width: 768px) {
+        .admin-sidebar { position: fixed; top: auto; bottom: 0; left: 0; right: 0; width: 100%; min-width: 100%; height: auto; padding: 0; border-right: none; border-top: 1px solid var(--glass-border); overflow-x: auto; overflow-y: hidden; z-index: 950; }
+        .admin-sidebar .sidebar-logo { display: none; }
+        .admin-sidebar nav { flex-direction: row; padding: 6px 10px; gap: 3px; white-space: nowrap; flex-wrap: nowrap; }
+        .admin-sidebar nav a { padding: 7px 12px; font-size: 0.72rem; border-radius: 16px; flex-shrink: 0; }
+        .admin-sidebar nav a.active { border-left: none; border: 1px solid var(--gold); }
+        .admin-sidebar nav a.return-link { border-top: none; margin-top: 0; padding-top: 7px; margin-left: 4px; }
+        .admin-main { margin-left: 0; padding: 16px 14px 90px; }
+        .cat-grid { grid-template-columns: 1fr; }
+    }
+</style>
+{% endblock %}
+{% block content %}
+<div class="admin-layout">
+    <aside class="admin-sidebar">
+        <div class="sidebar-logo">{{ site_name }}</div>
+        <nav>
+            <a href="{{ url_for('admin.dashboard') }}">仪表盘</a>
+            <a href="{{ url_for('admin.software_manage') }}">软件管理</a>
+            <a href="{{ url_for('admin.category_manage') }}" class="active">分类管理</a>
+            <a href="{{ url_for('admin.user_manage') }}">用户管理</a>
+            <a href="{{ url_for('admin.card_manage') }}">邀请码管理</a>
+            <a href="{{ url_for('admin.announcement_manage') }}">公告管理</a>
+            <a href="{{ url_for('admin.feedback_manage') }}">反馈管理</a>
+            <a href="{{ url_for('admin.ad_manage') }}">广告管理</a>
+            <a href="{{ url_for('admin.download_stats') }}">下载统计</a>
+            <a href="{{ url_for('admin.settings') }}">系统设置</a>
+            <a href="{{ url_for('main.index') }}" class="return-link">返回前台</a>
+        </nav>
+    </aside>
+    <div class="admin-main">
+        <div class="page-header">
+            <h2>分类管理</h2>
+            <button class="btn btn-primary btn-sm" onclick="openCatModal()">添加分类</button>
+        </div>
+        <div class="cat-grid">
+            {% for cat in categories %}
+            <div class="cat-card">
+                <div class="cat-name">{{ cat.name }}</div>
+                <div class="cat-desc">{{ cat.description or '暂无描述' }}</div>
+                <div class="cat-meta">
+                    <span class="cat-count">{{ cat.software_count }} 个软件</span>
+                    <span>排序: {{ cat.sort_order }}</span>
+                    <span class="cat-status {{ 'cat-status-active' if cat.is_active else 'cat-status-inactive' }}">{{ '启用' if cat.is_active else '禁用' }}</span>
+                </div>
+                <div class="cat-actions">
+                    <button class="btn btn-outline btn-sm" onclick="openCatModal({{ cat.id }}, '{{ cat.name }}', '{{ cat.description or '' }}', {{ cat.sort_order }}, {{ cat.is_active }})">编辑</button>
+                    <button class="btn btn-danger btn-sm" onclick="deleteCategory({{ cat.id }}, '{{ cat.name }}')">删除</button>
+                </div>
+            </div>
+            {% endfor %}
+            {% if not categories %}
+            <div class="empty-state" style="grid-column: 1 / -1;">
+                <p>暂无分类，点击上方按钮添加</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="catModal" style="display:none;">
+    <div class="modal-box">
+        <h3 id="catModalTitle">添加分类</h3>
+        <div class="form-group">
+            <label class="form-label">分类名称</label>
+            <input type="text" class="form-input" id="catName" placeholder="输入分类名称">
+        </div>
+        <div class="form-group">
+            <label class="form-label">描述</label>
+            <input type="text" class="form-input" id="catDesc" placeholder="输入分类描述">
+        </div>
+        <div class="form-group">
+            <label class="form-label">排序</label>
+            <input type="number" class="form-input" id="catSort" value="0" min="0">
+        </div>
+        <div class="form-group">
+            <label class="form-label">状态</label>
+            <select class="form-select" id="catActive">
+                <option value="1">启用</option>
+                <option value="0">禁用</option>
+            </select>
+        </div>
+        <div class="modal-actions">
+            <button class="btn btn-outline btn-sm" onclick="closeCatModal()">取消</button>
+            <button class="btn btn-primary btn-sm" id="catSaveBtn" onclick="saveCategory()">保存</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+var editCatId = null;
+
+function openCatModal(id, name, desc, sort, active) {
+    editCatId = id || null;
+    document.getElementById('catModalTitle').textContent = id ? '编辑分类' : '添加分类';
+    document.getElementById('catName').value = name || '';
+    document.getElementById('catDesc').value = desc || '';
+    document.getElementById('catSort').value = sort || 0;
+    document.getElementById('catActive').value = active !== undefined ? active : 1;
+    document.getElementById('catModal').style.display = 'flex';
+}
+function closeCatModal() {
+    document.getElementById('catModal').style.display = 'none';
+    editCatId = null;
+}
+document.getElementById('catModal').addEventListener('click', function(e) {
+    if (e.target === this) closeCatModal();
+});
+
+async function saveCategory() {
+    var name = document.getElementById('catName').value.trim();
+    var desc = document.getElementById('catDesc').value.trim();
+    var sort = parseInt(document.getElementById('catSort').value) || 0;
+    var active = parseInt(document.getElementById('catActive').value);
+    if (!name) { Toast.show('请输入分类名称', 'warning'); return; }
+    var btn = document.getElementById('catSaveBtn');
+    btn.disabled = true; btn.textContent = '保存中...';
+    try {
+        var url = editCatId ? '/admin/api/category/edit/' + editCatId : '/admin/api/category/add';
+        var resp = await API.post(url, { name: name, description: desc, sort_order: sort, is_active: active });
+        if (resp.success) {
+            Toast.show(resp.message, 'success');
+            setTimeout(function() { location.reload(); }, 600);
+        } else {
+            Toast.show(resp.message, 'danger');
+            btn.disabled = false; btn.textContent = '保存';
+        }
+    } catch(e) {
+        Toast.show('操作失败', 'danger');
+        btn.disabled = false; btn.textContent = '保存';
+    }
+}
+
+async function deleteCategory(id, name) {
+    if (!confirm('确定删除分类"' + name + '"？相关软件的此分类将被清空。')) return;
+    try {
+        var resp = await API.post('/admin/api/category/delete/' + id, {});
+        if (resp.success) {
+            Toast.show(resp.message, 'success');
+            setTimeout(function() { location.reload(); }, 600);
+        } else {
+            Toast.show(resp.message, 'danger');
+        }
+    } catch(e) {
+        Toast.show('删除失败', 'danger');
+    }
+}
+</script>
+{% endblock %}

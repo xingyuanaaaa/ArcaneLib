@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}免费专区 - {{ site_name }}{% endblock %}
+{% block head_extra %}
+<style>
+    .free-header { text-align: center; padding: 20px 0 10px; }
+    .free-header h2 { font-family: var(--font-display); font-size: 1.3rem; color: var(--text-gold); letter-spacing: 2px; }
+    .free-header p { font-size: 0.82rem; color: var(--text-muted); margin-top: 4px; }
+</style>
+{% endblock %}
+{% block content %}
+<div class="page-content">
+    <div class="free-header">
+        <h2>免费专区</h2>
+        <p>无需登录，免费下载</p>
+    </div>
+
+    <div class="feed-list">
+        {% for sw in software_list %}
+        <a href="{{ url_for('main.software_detail', software_id=sw.id) }}" class="feed-card">
+            <div class="feed-cover">
+                <span class="feed-badge feed-badge-free">免费</span>
+                {% if sw.cover_image %}
+                <img src="{{ sw.cover_image }}" alt="{{ sw.name }}">
+                {% else %}
+                <div class="feed-cover-placeholder">{{ sw.name[:2] }}</div>
+                {% endif %}
+            </div>
+            <div class="feed-body">
+                <div class="feed-title">{{ sw.name }}</div>
+                <div class="feed-meta">
+                    <span>{{ sw.category_name or '未分类' }}</span>
+                    <span>{{ sw.download_count }} 下载</span>
+                    <span>{% if sw.file_size %}{{ (sw.file_size / 1048576)|round(1) }} MB{% endif %}</span>
+                </div>
+            </div>
+        </a>
+        {% else %}
+        <div class="empty-state">
+            <p>暂无免费软件</p>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% if total_pages > 1 %}
+    <div class="pagination">
+        {% if page > 1 %}
+        <a href="{{ url_for('main.free_zone', page=page-1) }}" class="btn btn-outline btn-sm">上一页</a>
+        {% endif %}
+        <span style="color:var(--text-muted);font-size:0.82rem;padding:0 10px">{{ page }}/{{ total_pages }}</span>
+        {% if page < total_pages %}
+        <a href="{{ url_for('main.free_zone', page=page+1) }}" class="btn btn-outline btn-sm">下一页</a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

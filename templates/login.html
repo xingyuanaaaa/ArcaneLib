@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+
+{% block title %}登录 - {{ site_name }}{% endblock %}
+
+{% block head_extra %}
+<style>
+    .auth-card {
+        box-shadow: 0 8px 40px rgba(124, 58, 237, 0.1), 0 2px 12px rgba(201, 160, 80, 0.08), 0 0 80px rgba(201, 160, 80, 0.04);
+    }
+    .auth-card .auth-logo h1 {
+        font-size: 1.6rem;
+        letter-spacing: 4px;
+        color: var(--gold);
+        text-shadow: 0 0 24px var(--gold-glow), 0 0 48px rgba(201, 160, 80, 0.1);
+    }
+    .btn-auth {
+        margin-top: 10px;
+        height: 46px;
+        font-size: 0.95rem;
+        letter-spacing: 3px;
+        border-radius: 23px;
+        transition: all 0.3s;
+    }
+    .btn-auth:active {
+        transform: scale(0.97);
+        opacity: 0.85;
+    }
+    .btn-auth:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+    .auth-footer {
+        text-align: center;
+        margin-top: 28px;
+        font-size: 0.84rem;
+        color: var(--text-muted);
+    }
+    .auth-footer a {
+        color: var(--gold);
+        font-weight: 600;
+        text-decoration: none;
+        transition: all 0.25s;
+    }
+    .auth-footer a:hover {
+        color: var(--gold-bright);
+        text-shadow: 0 0 12px var(--gold-glow);
+    }
+    .auth-back {
+        text-align: center;
+        margin-top: 16px;
+        font-size: 0.78rem;
+    }
+    .auth-back a {
+        color: var(--text-muted);
+        text-decoration: none;
+        transition: color 0.25s;
+    }
+    .auth-back a:hover {
+        color: var(--text-gold);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="auth-page">
+    <div class="auth-card">
+        <div class="auth-logo">
+            <h1>Arcane库</h1>
+            <p>登录你的账号</p>
+        </div>
+
+        <form id="loginForm" novalidate>
+            <div class="form-group">
+                <label class="form-label" for="username">用户名</label>
+                <input type="text" id="username" name="username" class="form-input"
+                       placeholder="请输入用户名" autocomplete="username" required autofocus>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="password">密码</label>
+                <input type="password" id="password" name="password" class="form-input"
+                       placeholder="请输入密码" autocomplete="current-password" required>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-block btn-auth" id="loginBtn">登录</button>
+        </form>
+
+        <div class="auth-footer">
+            没有账号？
+            <a href="{{ url_for('auth.register_page') }}">立即注册</a>
+        </div>
+
+        <div class="auth-back">
+            <a href="{{ url_for('main.index') }}">返回首页</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var loginForm = document.getElementById('loginForm');
+    var loginBtn = document.getElementById('loginBtn');
+
+    loginForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        var username = document.getElementById('username').value.trim();
+        var password = document.getElementById('password').value;
+
+        if (!username) {
+            Toast.warning('请输入用户名');
+            return;
+        }
+        if (!password) {
+            Toast.warning('请输入密码');
+            return;
+        }
+
+        loginBtn.disabled = true;
+        loginBtn.textContent = '登录中...';
+
+        API.post('/api/login', { username: username, password: password })
+            .then(function(res) {
+                if (res.success) {
+                    Toast.success(res.message || '登录成功');
+                    setTimeout(function() {
+                        window.location.href = res.data.redirect || '/';
+                    }, 800);
+                } else {
+                    Toast.error(res.message || '登录失败');
+                    loginBtn.disabled = false;
+                    loginBtn.textContent = '登录';
+                }
+            })
+            .catch(function(err) {
+                Toast.error('网络错误，请稍后重试');
+                loginBtn.disabled = false;
+                loginBtn.textContent = '登录';
+            });
+    });
+});
+</script>
+{% endblock %}

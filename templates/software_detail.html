@@ -1,0 +1,367 @@
+{% extends "base.html" %}
+{% block title %}{{ software.name }} - {{ site_name }}{% endblock %}
+
+{% block content %}
+{% set now_str = now.strftime('%Y-%m-%d %H:%M:%S') %}
+
+<div class="detail-header">
+    <div style="width: 72px; height: 72px; margin: 0 auto 14px; border-radius: 18px;
+                background: linear-gradient(135deg, rgba(124,58,237,0.1), rgba(201,160,80,0.08));
+                display: flex; align-items: center; justify-content: center;
+                font-family: var(--font-display); font-size: 2.2rem; font-weight: 900; color: var(--gold);
+                border: 1px solid rgba(201,160,80,0.2);">
+        {{ software.name[0] }}
+    </div>
+    <h1>{{ software.name }}</h1>
+    {% if software.version %}
+    <div class="detail-version">v{{ software.version }}</div>
+    {% endif %}
+    <div style="margin-top: 10px; display: flex; gap: 6px; justify-content: center;">
+        {% if software.is_free %}
+        <span class="badge" style="background: rgba(20,184,166,0.1); color: var(--arcane-teal); border: 1px solid rgba(20,184,166,0.2);">免费</span>
+        {% elif software.require_vip %}
+        <span class="vip-badge">VIP</span>
+        {% endif %}
+        {% if software.require_points %}
+        <span class="badge" style="background: rgba(201,160,80,0.06); color: var(--text-secondary); border: 1px solid var(--glass-border);">{{ software.require_points }} 积分</span>
+        {% endif %}
+    </div>
+</div>
+
+<div class="detail-info">
+    <div class="info-row">
+        <span class="info-label">分类</span>
+        <span class="info-value">
+            <a href="{{ url_for('main.category_view', category_id=software.category_id) }}" style="color: var(--gold); text-decoration: none;">
+                {{ software.category_name or '未分类' }}
+            </a>
+        </span>
+    </div>
+    <div class="info-row">
+        <span class="info-label">平台</span>
+        <span class="info-value">{{ software.platform or 'Windows' }}</span>
+    </div>
+    <div class="info-row">
+        <span class="info-label">文件大小</span>
+        <span class="info-value">{{ software.file_size | default(0, true) | filesizeformat if software.file_size else '未知' }}</span>
+    </div>
+    <div class="info-row">
+        <span class="info-label">下载次数</span>
+        <span class="info-value">{{ software.download_count or 0 }} 次</span>
+    </div>
+    <div class="info-row">
+        <span class="info-label">评分</span>
+        <span class="info-value">
+            {% if software.rating %}
+            <span style="color: var(--gold);">
+                {% for i in range(5) %}
+                {% if i < (software.rating | int) %}
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="var(--gold)" style="vertical-align: -1px;"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                {% else %}
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--glass-border)" stroke-width="1.5" style="vertical-align: -1px;"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                {% endif %}
+                {% endfor %}
+            </span>
+            {{ '%.1f' | format(software.rating) }}
+            <small style="color: var(--text-muted); font-style: italic;">({{ software.rating_count or 0 }} 人评价)</small>
+            {% else %}
+            <span style="color: var(--text-muted);">暂无评分</span>
+            {% endif %}
+        </span>
+    </div>
+    {% if software.official_url %}
+    <div class="info-row">
+        <span class="info-label">官方网站</span>
+        <span class="info-value">
+            <a href="{{ software.official_url }}" target="_blank" rel="noopener" style="color: var(--gold); text-decoration: none;">
+                访问官网
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="vertical-align: -1px;"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+            </a>
+        </span>
+    </div>
+    {% endif %}
+</div>
+
+{% if g.user and (software.require_vip or software.require_points) %}
+{% set vip_valid = g.user.vip_level >= 1 and g.user.vip_expire_time and g.user.vip_expire_time > now_str %}
+{% set points_enough = g.user.points >= (software.require_points or 0) %}
+<div style="margin: 8px 14px; background: var(--glass-card); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border: 1px solid var(--glass-border); border-radius: var(--radius-md); padding: 12px 15px;">
+    <div style="font-family: var(--font-display); font-size: 0.72rem; font-weight: 600; letter-spacing: 1.5px; margin-bottom: 10px; color: var(--text-gold); display: flex; align-items: center; gap: 8px;">
+        <span style="font-size: 0.45rem; color: var(--gold);">◆</span>
+        权限状态
+    </div>
+    {% if software.require_vip %}
+    <div style="display: flex; align-items: center; justify-content: space-between; padding: 5px 0; font-size: 0.78rem;">
+        <span style="color: var(--text-muted);">VIP状态</span>
+        <span>
+            {% if vip_valid %}
+            <span style="color: var(--arcane-teal); font-weight: 600;">VIP会员
+                <small style="color: var(--text-muted); font-weight: 400;">({{ g.user.vip_expire_time[:10] }} 到期)</small>
+            </span>
+            {% else %}
+            <span style="color: var(--arcane-crimson); font-weight: 600;">
+                {% if g.user.vip_level < 1 %}非VIP{% else %}VIP已过期{% endif %}
+            </span>
+            <a href="{{ url_for('main.card_redeem_page') }}" style="margin-left: 8px; font-size: 0.68rem; color: var(--gold); text-decoration: none; border: 1px solid rgba(201,160,80,0.2); padding: 2px 8px; border-radius: 8px;">兑换VIP</a>
+            {% endif %}
+        </span>
+    </div>
+    {% endif %}
+    {% if software.require_points and software.require_points > 0 %}
+    <div style="display: flex; align-items: center; justify-content: space-between; padding: 5px 0; font-size: 0.78rem;{% if software.require_vip %} border-top: 1px solid rgba(255,255,255,0.02); margin-top: 2px; padding-top: 7px;{% endif %}">
+        <span style="color: var(--text-muted);">积分余额</span>
+        <span>
+            <span style="color: var(--text-primary); font-weight: 600;">{{ g.user.points }} 积分</span>
+            {% if not points_enough %}
+            <span style="color: var(--arcane-crimson); font-size: 0.7rem; margin-left: 4px;">(差{{ software.require_points - g.user.points }})</span>
+            {% endif %}
+        </span>
+    </div>
+    {% endif %}
+    <div style="border-top: 1px solid rgba(255,255,255,0.03); margin-top: 8px; padding-top: 8px; font-size: 0.72rem; color: var(--text-muted); display: flex; align-items: center; gap: 6px;">
+        <span>此软件需要：</span>
+        {% if software.require_vip %}
+        <span style="color: var(--gold); font-weight: 600;">VIP会员</span>
+        {% if software.require_points and software.require_points > 0 %}<span>+</span>{% endif %}
+        {% endif %}
+        {% if software.require_points and software.require_points > 0 %}
+        <span style="color: var(--gold); font-weight: 600;">{{ software.require_points }} 积分</span>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+<div style="padding: 0 14px 8px;">
+    {% if g.user %}
+    <div style="display: flex; gap: 8px;">
+        {% if software.is_free %}
+        <button id="downloadBtn" class="btn btn-primary btn-block" onclick="handleDownload()"
+                style="flex: 1; font-size: 0.95rem; padding: 13px 0;
+                       background: linear-gradient(135deg, rgba(20,184,166,0.15), rgba(20,184,166,0.06));
+                       border: 1px solid rgba(20,184,166,0.3); color: var(--arcane-teal);">
+            免费下载
+        </button>
+        {% elif software.require_vip or software.require_points %}
+            {% set vip_valid = g.user.vip_level >= 1 and g.user.vip_expire_time and g.user.vip_expire_time > now_str %}
+            {% set points_enough = g.user.points >= (software.require_points or 0) %}
+            {% set can_vip = (not software.require_vip) or vip_valid %}
+            {% set can_points = (not software.require_points or software.require_points <= 0) or points_enough %}
+            {% if can_vip and can_points %}
+                {% if software.require_vip and software.require_points and software.require_points > 0 %}
+                <button id="downloadBtn" class="btn btn-primary btn-block" onclick="handleDownload()"
+                        style="flex: 1; font-size: 0.95rem; padding: 13px 0;
+                               background: linear-gradient(135deg, rgba(201,160,80,0.2), rgba(124,58,237,0.1));
+                               border: 1px solid rgba(201,160,80,0.4); color: var(--gold-bright);">
+                    VIP下载 · {{ software.require_points }}积分
+                </button>
+                {% elif software.require_vip %}
+                <button id="downloadBtn" class="btn btn-primary btn-block" onclick="handleDownload()"
+                        style="flex: 1; font-size: 0.95rem; padding: 13px 0;
+                               background: linear-gradient(135deg, rgba(201,160,80,0.2), rgba(124,58,237,0.1));
+                               border: 1px solid rgba(201,160,80,0.4); color: var(--gold-bright);">
+                    VIP下载
+                </button>
+                {% elif software.require_points and software.require_points > 0 %}
+                <button id="downloadBtn" class="btn btn-primary btn-block" onclick="handleDownload()"
+                        style="flex: 1; font-size: 0.95rem; padding: 13px 0;">
+                    使用 {{ software.require_points }} 积分下载
+                </button>
+                {% endif %}
+            {% else %}
+                <div style="flex: 1; display: flex; flex-direction: column; gap: 8px;">
+                    <button class="btn btn-block" disabled
+                            style="font-size: 0.9rem; padding: 13px 0; background: rgba(255,255,255,0.02);
+                                   border: 1px solid rgba(255,255,255,0.06); color: var(--text-muted); cursor: not-allowed;">
+                        {% if software.require_vip and not vip_valid %}
+                            需要VIP会员
+                            {% if software.require_points and software.require_points > 0 and not points_enough %}
+                             + {{ software.require_points }}积分（当前：{{ g.user.points }}积分，还差{{ software.require_points - g.user.points }}积分）
+                            {% endif %}
+                        {% elif software.require_points and software.require_points > 0 and not points_enough %}
+                            需要{{ software.require_points }}积分（当前：{{ g.user.points }}积分，还差{{ software.require_points - g.user.points }}积分）
+                        {% endif %}
+                    </button>
+                    <div style="display: flex; gap: 8px; font-size: 0.72rem;">
+                        {% if software.require_vip and not vip_valid %}
+                        <a href="{{ url_for('main.card_redeem_page') }}" style="color: var(--gold); text-decoration: none; padding: 4px 10px; border: 1px solid rgba(201,160,80,0.2); border-radius: 10px; font-weight: 600;">兑换VIP邀请码</a>
+                        {% endif %}
+                        {% if software.require_points and software.require_points > 0 and not points_enough %}
+                        <a href="{{ url_for('main.user_center') }}" style="color: var(--arcane-teal); text-decoration: none; padding: 4px 10px; border: 1px solid rgba(20,184,166,0.2); border-radius: 10px; font-weight: 600;">获取积分</a>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endif %}
+        {% else %}
+        <button id="downloadBtn" class="btn btn-primary btn-block" onclick="handleDownload()"
+                style="flex: 1; font-size: 0.95rem; padding: 13px 0;">
+            下载软件
+        </button>
+        {% endif %}
+        <button id="favBtn" class="btn btn-outline" onclick="handleFavorite()"
+                style="width: 48px; height: 48px; padding: 0; border-radius: 50%; flex-shrink: 0;">
+            <svg id="favIcon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#5c5848" stroke-width="2" stroke-linecap="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+        </button>
+        <button id="followBtn" class="btn btn-outline" onclick="handleFollow()"
+                style="width: 48px; height: 48px; padding: 0; border-radius: 50%; flex-shrink: 0;">
+            <svg id="followIcon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#5c5848" stroke-width="2" stroke-linecap="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
+        </button>
+    </div>
+    {% else %}
+    <a href="{{ url_for('auth.login_page') }}" class="btn btn-primary btn-block"
+       style="font-size: 0.95rem; padding: 13px 0;">
+        请先登录后下载
+    </a>
+    {% endif %}
+</div>
+
+<div class="detail-description">
+    <div style="font-family: var(--font-display); font-size: 0.8rem; font-weight: 600; letter-spacing: 2px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; color: var(--text-gold);">
+        <span style="font-size: 0.5rem; color: var(--gold);">◆</span>
+        软件介绍
+    </div>
+    {% if software.long_description %}
+    {{ software.long_description }}
+    {% elif software.description %}
+    {{ software.description }}
+    {% else %}
+    <p style="color: var(--text-muted); font-style: italic;">暂无详细介绍</p>
+    {% endif %}
+</div>
+
+{% if related %}
+<div class="h-scroll-section">
+    <div class="h-scroll-title">相关推荐</div>
+    <div class="h-scroll-row">
+        {% for sw in related %}
+        <a href="{{ url_for('main.software_detail', software_id=sw.id) }}" class="h-scroll-card" style="width: 130px;">
+            <div class="hs-cover">
+                {% if sw.cover_image %}
+                <img src="{{ sw.cover_image }}" alt="{{ sw.name }}" loading="lazy" style="width:100%;height:100%;object-fit:cover;">
+                {% else %}
+                {{ sw.name[0] }}
+                {% endif %}
+            </div>
+            <div class="hs-info">
+                <div class="hs-name">{{ sw.name }}</div>
+                <div class="hs-stat">
+                    {{ sw.download_count or 0 }} 次下载
+                    {% if sw.rating %}
+                    <span style="color: var(--gold); margin-left: 6px;">
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="var(--gold)" style="vertical-align: -1px;"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                        {{ '%.1f' | format(sw.rating) }}
+                    </span>
+                    {% endif %}
+                </div>
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function() {
+    var softwareId = {{ software.id }};
+
+    {% if g.user %}
+    API.get('/api/software/' + softwareId + '/status')
+        .then(function(res) {
+            if (res.success && res.data) {
+                updateFavBtn(res.data.favorited);
+                updateFollowBtn(res.data.followed);
+            }
+        })
+        .catch(function() {});
+    {% endif %}
+
+    window.handleDownload = function() {
+        var btn = document.getElementById('downloadBtn');
+        btn.disabled = true;
+        btn.textContent = '正在处理...';
+
+        API.post('/api/software/download/' + softwareId, {})
+            .then(function(res) {
+                if (res.success) {
+                    Toast.success(res.message || '开始下载');
+                    if (res.data && res.data.download_url) {
+                        window.location.href = res.data.download_url;
+                    }
+                } else {
+                    Toast.error(res.message || '下载失败');
+                    btn.disabled = false;
+                    btn.textContent = btn.getAttribute('data-original-text') || '下载软件';
+                }
+            })
+            .catch(function() {
+                Toast.error('网络错误，请稍后重试');
+                btn.disabled = false;
+                btn.textContent = btn.getAttribute('data-original-text') || '下载软件';
+            });
+    };
+
+    window.handleFavorite = function() {
+        var btn = document.getElementById('favBtn');
+        btn.disabled = true;
+        API.post('/api/favorite/toggle/' + softwareId, {})
+            .then(function(res) {
+                if (res.success) {
+                    Toast.success(res.message);
+                    if (res.data) {
+                        updateFavBtn(res.data.favorited);
+                    }
+                } else {
+                    Toast.error(res.message || '操作失败');
+                }
+                btn.disabled = false;
+            })
+            .catch(function() {
+                Toast.error('网络错误，请稍后重试');
+                btn.disabled = false;
+            });
+    };
+
+    window.handleFollow = function() {
+        var btn = document.getElementById('followBtn');
+        btn.disabled = true;
+        API.post('/api/follow/toggle/' + softwareId, {})
+            .then(function(res) {
+                if (res.success) {
+                    Toast.success(res.message);
+                    if (res.data) {
+                        updateFollowBtn(res.data.followed);
+                    }
+                } else {
+                    Toast.error(res.message || '操作失败');
+                }
+                btn.disabled = false;
+            })
+            .catch(function() {
+                Toast.error('网络错误，请稍后重试');
+                btn.disabled = false;
+            });
+    };
+
+    function updateFavBtn(favorited) {
+        var icon = document.getElementById('favIcon');
+        if (favorited) {
+            icon.setAttribute('fill', '#c9a050');
+            icon.setAttribute('stroke', '#c9a050');
+        } else {
+            icon.setAttribute('fill', 'none');
+            icon.setAttribute('stroke', '#5c5848');
+        }
+    }
+
+    function updateFollowBtn(followed) {
+        var icon = document.getElementById('followIcon');
+        if (followed) {
+            icon.setAttribute('stroke', '#c9a050');
+        } else {
+            icon.setAttribute('stroke', '#5c5848');
+        }
+    }
+})();
+</script>
+{% endblock %}

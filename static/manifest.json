@@ -1,0 +1,23 @@
+{
+    "name": "软件库",
+    "short_name": "软件库",
+    "description": "专业软件资源库",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#F3F0ED",
+    "theme_color": "#FB7299",
+    "orientation": "portrait-primary",
+    "lang": "zh-CN",
+    "icons": [
+        {
+            "src": "/static/uploads/images/app-icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "/static/uploads/images/app-icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        }
+    ]
+}

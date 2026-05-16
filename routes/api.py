@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# 杞欢搴撶郴缁?- REST API璺敱锛堜緵鎵嬫満绔拰鐢佃剳绔皟鐢級
+# 软件库系统 - REST API路由（供手机端和电脑端调用）
 
 from flask import Blueprint, request, jsonify, session
 from models import query_db, execute_db, get_db, get_config
@@ -14,11 +14,11 @@ import hashlib
 api_bp = Blueprint('api', __name__)
 
 
-# ==================== 杞欢鐩稿叧API ====================
+# ==================== 软件相关API ====================
 
 @api_bp.route('/software/list')
 def api_software_list():
-    """鑾峰彇杞欢鍒楄〃"""
+    """获取软件列表"""
     page = request.args.get('page', 1, type=int)
     category_id = request.args.get('category_id', 0, type=int)
     sort = request.args.get('sort', 'newest')
@@ -62,7 +62,7 @@ def api_software_list():
 
 @api_bp.route('/software/detail/<int:software_id>')
 def api_software_detail(software_id):
-    """鑾峰彇杞欢璇︽儏"""
+    """获取软件详情"""
     software = query_db(
         'SELECT s.*, c.name as category_name FROM software s '
         'LEFT JOIN categories c ON s.category_id = c.id '
@@ -70,7 +70,7 @@ def api_software_detail(software_id):
         (software_id,), one=True
     )
     if not software:
-        return jsonify({'success': False, 'message': '杞欢涓嶅瓨鍦?}), 404
+        return jsonify({'success': False, 'message': '软件不存在'}), 404
 
     execute_db('UPDATE software SET view_count = view_count + 1 WHERE id = ?', (software_id,))
 
@@ -82,14 +82,14 @@ def api_software_detail(software_id):
 
 @api_bp.route('/software/search')
 def api_software_search():
-    """鎼滅储杞欢"""
+    """搜索软件"""
     q = request.args.get('q', '').strip()
     page = request.args.get('page', 1, type=int)
     category_id = request.args.get('category_id', 0, type=int)
     offset = (page - 1) * ITEMS_PER_PAGE
 
     if not q:
-        return jsonify({'success': False, 'message': '璇疯緭鍏ユ悳绱㈠叧閿瘝'})
+        return jsonify({'success': False, 'message': '请输入搜索关键词'})
 
     where = "WHERE s.is_active = 1 AND (s.name LIKE ? OR s.description LIKE ? OR s.tags LIKE ?)"
     params = [f'%{q}%', f'%{q}%', f'%{q}%']
@@ -123,10 +123,10 @@ def api_software_search():
 @rate_limit(max_requests=30, window=60)
 @csrf_protect
 def api_software_download(software_id):
-    """涓嬭浇杞欢 - 闇€瑕佺櫥褰曚笖鏈夋潈闄?""
+    """下载软件 - 需要登录且有权限"""
     software = query_db('SELECT * FROM software WHERE id = ? AND is_active = 1', (software_id,), one=True)
     if not software:
-        return jsonify({'success': False, 'message': '杞欢涓嶅瓨鍦?}), 404
+        return jsonify({'success': False, 'message': '软件不存在'}), 404
 
     user = query_db('SELECT * FROM users WHERE id = ?', (session['user_id'],), one=True)
 
@@ -139,46 +139,48 @@ def api_software_download(software_id):
     if app_signature and data:
         sig_params = {k: str(v) for k, v in data.items() if k != 'signature'}
         if not verify_request_signature(sig_params, app_signature):
-            return jsonify({'success': False, 'message': '璇锋眰绛惧悕楠岃瘉澶辫触'}), 403
+            return jsonify({'success': False, 'message': '请求签名验证失败'}), 403
 
     if app_token:
         if not verify_app_token(app_token, session['user_id'], device_id):
-            return jsonify({'success': False, 'message': '浠ょ墝鏃犳晥鎴栧凡杩囨湡'}), 403
+            return jsonify({'success': False, 'message': '令牌无效或已过期'}), 403
 
     if device_id or user_agent:
         emu_indicators = check_emulator(device_id, user_agent)
         if emu_indicators:
             execute_db(
                 "INSERT INTO security_logs (event_type, ip_address, details, severity) VALUES (?, ?, ?, ?)",
-                ('emulator_detected', request.remote_addr, f'妯℃嫙鍣ㄧ幆澧? {emu_indicators}', 'warning')
+                ('emulator_detected', request.remote_addr, f'模拟器环境: {emu_indicators}', 'warning')
             )
 
-    # 闈炲厤璐硅蒋浠讹細鏍￠獙鏄惁閫氳繃閭€璇风爜娉ㄥ唽
+    # 非免费软件：校验是否通过邀请码注册
     if not software['is_free']:
         invite_check = query_db(
             "SELECT * FROM card_keys WHERE used_by = ? AND card_type = 'register' AND status = 'used'",
             (session['user_id'],), one=True
         )
         if not invite_check:
-            return jsonify({'success': False, 'message': '姝よ祫婧愰渶瑕佽喘涔伴個璇风爜鎵嶈兘涓嬭浇锛岃鍏堣喘涔伴個璇风爜娉ㄥ唽'}), 403
+            return jsonify({'success': False, 'message': '此资源需要购买邀请码才能下载，请先购买邀请码注册'}), 403
 
-    # 妫€鏌IP瑕佹眰
+    # 检查VIP要求
     if software['require_vip']:
         if user['vip_level'] < 1:
-            return jsonify({'success': False, 'message': '姝よ蒋浠堕渶瑕乂IP浼氬憳鎵嶈兘涓嬭浇锛岃鍏堝厬鎹IP鍗″瘑'}), 403
+            return jsonify({'success': False, 'message': '此软件需要VIP会员才能下载，请先兑换VIP卡密'}), 403
         if user['vip_expire_time']:
             from datetime import datetime
             expire = datetime.strptime(user['vip_expire_time'], '%Y-%m-%d %H:%M:%S')
             if expire < datetime.now():
-                return jsonify({'success': False, 'message': '鎮ㄧ殑VIP宸茶繃鏈燂紝璇风画璐?}), 403
+                return jsonify({'success': False, 'message': '您的VIP已过期，请续费'}), 403
 
-    # 妫€鏌ユ満鍣ㄧ爜缁戝畾锛堥潪鍏嶈垂杞欢闇€瑕佹牎楠屾満鍣ㄧ爜锛?    if not software['is_free']:
+    # 检查机器码绑定（非免费软件需要校验机器码）
+    if not software['is_free']:
         data = request.get_json(silent=True) or {}
         req_machine_code = (data.get('machine_code') or '').strip()
         if user['machine_code'] and req_machine_code != user['machine_code']:
-            return jsonify({'success': False, 'message': '鏈哄櫒鐮佷笉鍖归厤锛岃鍦ㄧ粦瀹氱殑璁惧涓婁笅杞?}), 403
+            return jsonify({'success': False, 'message': '机器码不匹配，请在绑定的设备上下载'}), 403
 
-    # 妫€鏌ユ瘡鏃ユ渶澶т笅杞芥鏁?    from datetime import datetime
+    # 检查每日最大下载次数
+    from datetime import datetime
     today = datetime.now().strftime('%Y-%m-%d')
     today_downloads = query_db(
         "SELECT COUNT(*) as cnt FROM download_logs WHERE user_id = ? AND date(downloaded_at) = ?",
@@ -186,9 +188,10 @@ def api_software_download(software_id):
     )
     max_daily = int(get_config('max_downloads_per_day') or 50)
     if today_downloads and today_downloads['cnt'] >= max_daily:
-        return jsonify({'success': False, 'message': f'浠婃棩涓嬭浇娆℃暟宸茶揪涓婇檺({max_daily}娆?'}), 429
+        return jsonify({'success': False, 'message': f'今日下载次数已达上限({max_daily}次)'}), 429
 
-    # 妫€鏌ヤ笅杞介棿闅?    last_download = query_db(
+    # 检查下载间隔
+    last_download = query_db(
         'SELECT downloaded_at FROM download_logs WHERE user_id = ? ORDER BY downloaded_at DESC LIMIT 1',
         (session['user_id'],), one=True
     )
@@ -198,19 +201,22 @@ def api_software_download(software_id):
         elapsed = (datetime.now() - last_time).total_seconds()
         if elapsed < interval:
             remaining = interval - int(elapsed)
-            return jsonify({'success': False, 'message': f'涓嬭浇杩囦簬棰戠箒锛岃{remaining}绉掑悗鍐嶈瘯'}), 429
+            return jsonify({'success': False, 'message': f'下载过于频繁，请{remaining}秒后再试'}), 429
 
-    # 妫€鏌ョН鍒嗚姹?    if software['require_points'] and software['require_points'] > 0:
+    # 检查积分要求
+    if software['require_points'] and software['require_points'] > 0:
         if user['points'] < software['require_points']:
-            return jsonify({'success': False, 'message': f'闇€瑕亄software["require_points"]}绉垎鎵嶈兘涓嬭浇'}), 403
+            return jsonify({'success': False, 'message': f'需要{software["require_points"]}积分才能下载'}), 403
 
-    # 鐢熸垚鍔犲瘑涓嬭浇閾炬帴锛堜竴娆℃€oken锛?    download_token = aes_encrypt(f"{software_id}:{session['user_id']}:{int(time.time())}")
+    # 生成加密下载链接（一次性token）
+    download_token = aes_encrypt(f"{software_id}:{session['user_id']}:{int(time.time())}")
 
-    # token鐢熸垚鎴愬姛鍚庢墸闄ょН鍒?    if software['require_points'] and software['require_points'] > 0:
+    # token生成成功后扣除积分
+    if software['require_points'] and software['require_points'] > 0:
         execute_db('UPDATE users SET points = points - ? WHERE id = ?',
                    (software['require_points'], session['user_id']))
 
-    # 璁板綍涓嬭浇
+    # 记录下载
     execute_db('UPDATE software SET download_count = download_count + 1 WHERE id = ?', (software_id,))
     execute_db(
         'INSERT INTO download_logs (user_id, software_id, software_name, ip_address, machine_code) VALUES (?, ?, ?, ?, ?)',
@@ -219,7 +225,7 @@ def api_software_download(software_id):
 
     return jsonify({
         'success': True,
-        'message': '鑾峰彇涓嬭浇閾炬帴鎴愬姛',
+        'message': '获取下载链接成功',
         'data': {
             'download_url': f"/api/software/do_download/{download_token}",
             'file_name': software['name'],
@@ -230,20 +236,21 @@ def api_software_download(software_id):
 
 @api_bp.route('/software/do_download/<token>')
 def api_do_download(token):
-    """瀹為檯涓嬭浇鏂囦欢 - 楠岃瘉token"""
+    """实际下载文件 - 验证token"""
     decrypted = aes_decrypt(token)
     if not decrypted:
-        return jsonify({'success': False, 'message': '涓嬭浇閾炬帴鏃犳晥鎴栧凡杩囨湡'}), 403
+        return jsonify({'success': False, 'message': '下载链接无效或已过期'}), 403
 
     try:
         software_id, user_id, ts = decrypted.split(':')
-        if int(time.time()) - int(ts) > 300:  # 5鍒嗛挓鏈夋晥鏈?            return jsonify({'success': False, 'message': '涓嬭浇閾炬帴宸茶繃鏈?}), 403
+        if int(time.time()) - int(ts) > 300:  # 5分钟有效期
+            return jsonify({'success': False, 'message': '下载链接已过期'}), 403
     except Exception:
-        return jsonify({'success': False, 'message': '涓嬭浇閾炬帴鏃犳晥'}), 403
+        return jsonify({'success': False, 'message': '下载链接无效'}), 403
 
     software = query_db('SELECT * FROM software WHERE id = ?', (software_id,), one=True)
     if not software:
-        return jsonify({'success': False, 'message': '杞欢涓嶅瓨鍦?}), 404
+        return jsonify({'success': False, 'message': '软件不存在'}), 404
 
     from flask import send_from_directory
     import os
@@ -253,14 +260,14 @@ def api_do_download(token):
         filename = os.path.basename(file_path)
         return send_from_directory(directory, filename, as_attachment=True,
                                    download_name=filename)
-    return jsonify({'success': False, 'message': '鏂囦欢涓嶅瓨鍦?}), 404
+    return jsonify({'success': False, 'message': '文件不存在'}), 404
 
 
-# ==================== 鍒嗙被API ====================
+# ==================== 分类API ====================
 
 @api_bp.route('/categories')
 def api_categories():
-    """鑾峰彇鎵€鏈夊垎绫?""
+    """获取所有分类"""
     categories = query_db(
         'SELECT c.*, COUNT(s.id) as software_count FROM categories c '
         'LEFT JOIN software s ON s.category_id = c.id AND s.is_active = 1 '
@@ -272,27 +279,29 @@ def api_categories():
     })
 
 
-# ==================== 鍗″瘑API ====================
+# ==================== 卡密API ====================
 
 @api_bp.route('/card/redeem', methods=['POST'])
 @login_required
 @rate_limit(max_requests=5, window=300)
 @csrf_protect
 def api_card_redeem():
-    """鍏戞崲鍗″瘑"""
+    """兑换卡密"""
     data = request.get_json() or {}
     card_key = (data.get('card_key') or '').strip().upper()
     machine_code = (data.get('machine_code') or '').strip()
 
     if not card_key:
-        return jsonify({'success': False, 'message': '璇疯緭鍏ュ崱瀵?})
+        return jsonify({'success': False, 'message': '请输入卡密'})
 
-    # 楠岃瘉鍗″瘑瀹屾暣鎬?    if not verify_card_key_integrity(card_key):
-        return jsonify({'success': False, 'message': '鍗″瘑鏍煎紡鏃犳晥'})
+    # 验证卡密完整性
+    if not verify_card_key_integrity(card_key):
+        return jsonify({'success': False, 'message': '卡密格式无效'})
 
-    # 鑾峰彇鏁版嵁搴撹繛鎺ワ紝寮€鍚簨鍔?    db = get_db()
+    # 获取数据库连接，开启事务
+    db = get_db()
     try:
-        # 鏌ユ壘鍗″瘑
+        # 查找卡密
         clean_key = card_key.replace('-', '')
         card = db.execute(
             'SELECT * FROM card_keys WHERE REPLACE(card_key, "-", "") = ?',
@@ -300,19 +309,19 @@ def api_card_redeem():
         ).fetchone()
 
         if not card:
-            return jsonify({'success': False, 'message': '鍗″瘑涓嶅瓨鍦?})
+            return jsonify({'success': False, 'message': '卡密不存在'})
 
         if card['status'] == 'used':
-            return jsonify({'success': False, 'message': '璇ュ崱瀵嗗凡琚娇鐢?})
+            return jsonify({'success': False, 'message': '该卡密已被使用'})
 
         if card['status'] == 'disabled':
-            return jsonify({'success': False, 'message': '璇ュ崱瀵嗗凡琚鐢?})
+            return jsonify({'success': False, 'message': '该卡密已被禁用'})
 
-        # 鎵ц鍏戞崲
+        # 执行兑换
         user = db.execute('SELECT * FROM users WHERE id = ?', (session['user_id'],)).fetchone()
 
         if card['card_type'] == 'vip':
-            # VIP鍗″瘑
+            # VIP卡密
             from datetime import datetime, timedelta
             current_expire = user['vip_expire_time']
             if current_expire:
@@ -330,38 +339,39 @@ def api_card_redeem():
             )
 
         elif card['card_type'] == 'points':
-            # 绉垎鍗″瘑
+            # 积分卡密
             db.execute(
                 'UPDATE users SET points = points + ? WHERE id = ?',
                 (card['points'], session['user_id'])
             )
 
-        # 鏇存柊鍗″瘑鐘舵€?        db.execute(
+        # 更新卡密状态
+        db.execute(
             "UPDATE card_keys SET status = 'used', used_by = ?, used_at = datetime('now', 'localtime'), bound_machine_code = ? WHERE id = ?",
             (session['user_id'], machine_code, card['id'])
         )
 
-        # 鍐欏叆瀹夊叏鏃ュ織
+        # 写入安全日志
         db.execute(
             "INSERT INTO security_logs (event_type, ip_address, details, severity) VALUES (?, ?, ?, ?)",
             ('card_redeem', request.remote_addr,
-             f'鐢ㄦ埛ID:{session["user_id"]} 鍏戞崲浜唟card["card_type"]}鍗″瘑(ID:{card["id"]})',
+             f'用户ID:{session["user_id"]} 兑换了{card["card_type"]}卡密(ID:{card["id"]})',
              'info')
         )
 
-        # 鎻愪氦浜嬪姟
+        # 提交事务
         db.commit()
 
         return jsonify({
             'success': True,
-            'message': f'鍏戞崲鎴愬姛锛? + (
-                f'VIP鏃堕暱澧炲姞{card["vip_days"]}澶? if card['card_type'] == 'vip'
-                else f'鑾峰緱{card["points"]}绉垎'
+            'message': f'兑换成功！' + (
+                f'VIP时长增加{card["vip_days"]}天' if card['card_type'] == 'vip'
+                else f'获得{card["points"]}积分'
             )
         })
     except Exception as e:
         db.rollback()
-        return jsonify({'success': False, 'message': '鍏戞崲澶辫触锛岀郴缁熼敊璇紝璇烽噸璇?})
+        return jsonify({'success': False, 'message': '兑换失败，系统错误，请重试'})
     finally:
         db.close()
 
@@ -369,7 +379,7 @@ def api_card_redeem():
 @api_bp.route('/card/list', methods=['GET'])
 @login_required
 def api_card_list():
-    """鑾峰彇鐢ㄦ埛鐨勫崱瀵嗕娇鐢ㄨ褰?""
+    """获取用户的卡密使用记录"""
     records = query_db(
         'SELECT * FROM card_keys WHERE used_by = ? ORDER BY used_at DESC LIMIT 20',
         (session['user_id'],)
@@ -380,11 +390,11 @@ def api_card_list():
     })
 
 
-# ==================== 鍏憡API ====================
+# ==================== 公告API ====================
 
 @api_bp.route('/announcements')
 def api_announcements():
-    """鑾峰彇鍏憡鍒楄〃"""
+    """获取公告列表"""
     page = request.args.get('page', 1, type=int)
     offset = (page - 1) * ITEMS_PER_PAGE
 
@@ -408,37 +418,37 @@ def api_announcements():
     })
 
 
-# ==================== 鍙嶉API ====================
+# ==================== 反馈API ====================
 
 @api_bp.route('/feedback/submit', methods=['POST'])
 @login_required
 @rate_limit(max_requests=3, window=300)
 @csrf_protect
 def api_feedback_submit():
-    """鎻愪氦鍙嶉"""
+    """提交反馈"""
     data = request.get_json() or {}
     title = (data.get('title') or '').strip()
     content = (data.get('content') or '').strip()
     feedback_type = data.get('type', 'suggestion')
 
     if not title or not content:
-        return jsonify({'success': False, 'message': '璇峰～鍐欐爣棰樺拰鍐呭'})
+        return jsonify({'success': False, 'message': '请填写标题和内容'})
 
     if len(content) < 5:
-        return jsonify({'success': False, 'message': '鍐呭鑷冲皯5涓瓧'})
+        return jsonify({'success': False, 'message': '内容至少5个字'})
 
     execute_db(
         'INSERT INTO feedback (user_id, username, title, content, type) VALUES (?, ?, ?, ?, ?)',
         (session['user_id'], session.get('username', ''), title, content, feedback_type)
     )
 
-    return jsonify({'success': True, 'message': '鍙嶉鎻愪氦鎴愬姛锛屾劅璋㈡偍鐨勫弽棣堬紒'})
+    return jsonify({'success': True, 'message': '反馈提交成功，感谢您的反馈！'})
 
 
 @api_bp.route('/feedback/list', methods=['GET'])
 @login_required
 def api_feedback_list():
-    """鑾峰彇鐢ㄦ埛鐨勫弽棣堝垪琛?""
+    """获取用户的反馈列表"""
     records = query_db(
         'SELECT * FROM feedback WHERE user_id = ? ORDER BY created_at DESC LIMIT 20',
         (session['user_id'],)
@@ -449,11 +459,11 @@ def api_feedback_list():
     })
 
 
-# ==================== 缁熻API ====================
+# ==================== 统计API ====================
 
 @api_bp.route('/stats/overview')
 def api_stats_overview():
-    """鑾峰彇绔欑偣缁熻姒傝"""
+    """获取站点统计概览"""
     software_count = query_db('SELECT COUNT(*) as cnt FROM software WHERE is_active = 1', one=True)
     user_count = query_db('SELECT COUNT(*) as cnt FROM users', one=True)
     download_count = query_db('SELECT SUM(download_count) as cnt FROM software', one=True)
@@ -468,11 +478,11 @@ def api_stats_overview():
     })
 
 
-# ==================== 骞垮憡API ====================
+# ==================== 广告API ====================
 
 @api_bp.route('/ads/<position>')
 def api_ads(position):
-    """鑾峰彇骞垮憡浣嶅唴瀹?""
+    """获取广告位内容"""
     ads = query_db(
         'SELECT * FROM ad_slots WHERE is_active = 1 AND position = ? ORDER BY sort_order',
         (position,)
@@ -485,29 +495,29 @@ def api_ads(position):
 
 @api_bp.route('/ads/click/<int:ad_id>', methods=['POST'])
 def api_ad_click(ad_id):
-    """骞垮憡鐐瑰嚮缁熻"""
+    """广告点击统计"""
     execute_db('UPDATE ad_slots SET click_count = click_count + 1 WHERE id = ?', (ad_id,))
     return jsonify({'success': True})
 
 
-# ==================== 绛惧埌API ====================
+# ==================== 签到API ====================
 
 @api_bp.route('/checkin', methods=['POST'])
 @login_required
 def api_checkin():
-    """姣忔棩绛惧埌"""
+    """每日签到"""
     from datetime import datetime, timedelta
     today = datetime.now().strftime('%Y-%m-%d')
 
-    # 妫€鏌ヤ粖鏃ユ槸鍚﹀凡绛惧埌
+    # 检查今日是否已签到
     existing = query_db(
         'SELECT * FROM checkin_logs WHERE user_id = ? AND checkin_date = ?',
         (session['user_id'], today), one=True
     )
     if existing:
-        return jsonify({'success': False, 'message': '浠婃棩宸茬鍒?})
+        return jsonify({'success': False, 'message': '今日已签到'})
 
-    # 璁＄畻杩炵画绛惧埌澶╂暟
+    # 计算连续签到天数
     yesterday = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
     yesterday_log = query_db(
         'SELECT consecutive_days FROM checkin_logs WHERE user_id = ? AND checkin_date = ?',
@@ -515,12 +525,12 @@ def api_checkin():
     )
     consecutive = (yesterday_log['consecutive_days'] if yesterday_log else 0) + 1
 
-    # 鏍规嵁绛夌骇璁＄畻鍩虹绉垎
+    # 根据等级计算基础积分
     user = query_db('SELECT points, double_points_expire FROM users WHERE id = ?', (session['user_id'],), one=True)
     level_info = _calc_level(user['points'])
     base_points = 10 + (level_info['level'] - 1) * 2  # Lv.1=10, Lv.2=12, Lv.3=14...
 
-    # 杩炵画绛惧埌濂栧姳
+    # 连续签到奖励
     bonus = 0
     if consecutive % 7 == 0:
         bonus = 50
@@ -529,7 +539,8 @@ def api_checkin():
 
     total_earned = base_points + bonus
 
-    # 鍙屽€嶇Н鍒嗘娴?    is_double = False
+    # 双倍积分检测
+    is_double = False
     if user['double_points_expire']:
         try:
             expire = datetime.strptime(user['double_points_expire'], '%Y-%m-%d %H:%M:%S')
@@ -545,14 +556,15 @@ def api_checkin():
     )
     execute_db('UPDATE users SET points = points + ? WHERE id = ?', (total_earned, session['user_id']))
 
-    # 鑾峰彇鐢ㄦ埛鏈€鏂颁俊鎭?    user = query_db('SELECT points, vip_level, vip_expire_time FROM users WHERE id = ?', (session['user_id'],), one=True)
+    # 获取用户最新信息
+    user = query_db('SELECT points, vip_level, vip_expire_time FROM users WHERE id = ?', (session['user_id'],), one=True)
     level_info = _calc_level(user['points'])
 
-    msg = f'绛惧埌鎴愬姛锛佽幏寰梴total_earned}绉垎'
+    msg = f'签到成功！获得{total_earned}积分'
     if bonus:
-        msg += f'锛堝惈杩炵画{consecutive}澶╁鍔眥bonus}绉垎锛?
+        msg += f'（含连续{consecutive}天奖励{bonus}积分）'
     if is_double:
-        msg += '锛堝弻鍊嶇Н鍒嗗崱鐢熸晥涓級'
+        msg += '（双倍积分卡生效中）'
 
     return jsonify({
         'success': True,
@@ -571,7 +583,7 @@ def api_checkin():
 @api_bp.route('/checkin/status', methods=['GET'])
 @login_required
 def api_checkin_status():
-    """鑾峰彇绛惧埌鐘舵€?""
+    """获取签到状态"""
     from datetime import datetime, timedelta
     today = datetime.now().strftime('%Y-%m-%d')
 
@@ -586,7 +598,8 @@ def api_checkin_status():
         (session['user_id'], yesterday), one=True
     )
 
-    # 鑾峰彇鏈€杩?澶╃鍒拌褰?    week_logs = query_db(
+    # 获取最近7天签到记录
+    week_logs = query_db(
         "SELECT checkin_date, points_earned FROM checkin_logs WHERE user_id = ? AND checkin_date >= date('now', '-6 days', 'localtime') ORDER BY checkin_date",
         (session['user_id'],)
     )
@@ -601,34 +614,34 @@ def api_checkin_status():
     })
 
 
-# ==================== 绛夌骇API ====================
+# ==================== 等级API ====================
 
 def _calc_level(total_points):
-    """璁＄畻绛夌骇"""
+    """计算等级"""
     levels = [
-        (0, 100, 1, '鍏ラ棬'),
-        (100, 300, 2, '鍒濈骇'),
-        (300, 600, 3, '杩涢樁'),
-        (600, 1000, 4, '鐔熺粌'),
-        (1000, 2000, 5, '绮鹃€?),
-        (2000, 4000, 6, '涓撳'),
-        (4000, 8000, 7, '璧勬繁'),
-        (8000, float('inf'), 8, '棣栧腑'),
+        (0, 100, 1, '入门'),
+        (100, 300, 2, '初级'),
+        (300, 600, 3, '进阶'),
+        (600, 1000, 4, '熟练'),
+        (1000, 2000, 5, '精通'),
+        (2000, 4000, 6, '专家'),
+        (4000, 8000, 7, '资深'),
+        (8000, float('inf'), 8, '首席'),
     ]
     for low, high, lv, name in levels:
         if total_points < high:
             progress = int((total_points - low) / (high - low) * 100) if high != float('inf') else 100
             return {'level': lv, 'name': name, 'progress': max(0, min(100, progress)), 'next': high if high != float('inf') else 0, 'current': total_points}
-    return {'level': 8, 'name': '棣栧腑', 'progress': 100, 'next': 0, 'current': total_points}
+    return {'level': 8, 'name': '首席', 'progress': 100, 'next': 0, 'current': total_points}
 
 
 @api_bp.route('/user/level', methods=['GET'])
 @login_required
 def api_user_level():
-    """鑾峰彇鐢ㄦ埛绛夌骇淇℃伅"""
+    """获取用户等级信息"""
     user = query_db('SELECT points, vip_level, vip_expire_time, machine_code_bound FROM users WHERE id = ?', (session['user_id'],), one=True)
     if not user:
-        return jsonify({'success': False, 'message': '鐢ㄦ埛涓嶅瓨鍦?}), 404
+        return jsonify({'success': False, 'message': '用户不存在'}), 404
     level_info = _calc_level(user['points'])
 
     fav_count = query_db('SELECT COUNT(*) as cnt FROM user_favorites WHERE user_id = ?', (session['user_id'],), one=True)['cnt']
@@ -651,12 +664,12 @@ def api_user_level():
     })
 
 
-# ==================== 涓嬭浇璁板綍API ====================
+# ==================== 下载记录API ====================
 
 @api_bp.route('/user/downloads', methods=['GET'])
 @login_required
 def api_user_downloads():
-    """鑾峰彇褰撳墠鐢ㄦ埛鐨勪笅杞借褰?""
+    """获取当前用户的下载记录"""
     page = request.args.get('page', 1, type=int)
     offset = (page - 1) * 20
     total = query_db(
@@ -680,33 +693,33 @@ def api_user_downloads():
     })
 
 
-# ==================== 绛夌骇鏉冪泭API ====================
+# ==================== 等级权益API ====================
 
 LEVEL_BENEFITS = [
-    {'level': 1, 'name': '鍏ラ棬', 'min_points': 0, 'benefits': ['鍩虹涓嬭浇鏉冮檺', '姣忔棩绛惧埌+10绉垎']},
-    {'level': 2, 'name': '鍒濈骇', 'min_points': 100, 'benefits': ['姣忔棩绛惧埌+12绉垎', '鍙笅杞?0绉垎浠ヤ笅杞欢']},
-    {'level': 3, 'name': '杩涢樁', 'min_points': 300, 'benefits': ['姣忔棩绛惧埌+14绉垎', '鍙笅杞?0绉垎浠ヤ笅杞欢', '绉垎鍟嗗搧9.5鎶?]},
-    {'level': 4, 'name': '鐔熺粌', 'min_points': 600, 'benefits': ['姣忔棩绛惧埌+16绉垎', '鍙笅杞?0绉垎浠ヤ笅杞欢', '绉垎鍟嗗搧9鎶?]},
-    {'level': 5, 'name': '绮鹃€?, 'min_points': 1000, 'benefits': ['姣忔棩绛惧埌+18绉垎', '鍙笅杞芥墍鏈夌Н鍒嗚蒋浠?, '绉垎鍟嗗搧8.5鎶?]},
-    {'level': 6, 'name': '涓撳', 'min_points': 2000, 'benefits': ['姣忔棩绛惧埌+20绉垎', 'VIP鍏戞崲9鎶?, '绉垎鍟嗗搧8鎶?]},
-    {'level': 7, 'name': '璧勬繁', 'min_points': 4000, 'benefits': ['姣忔棩绛惧埌+25绉垎', 'VIP鍏戞崲8鎶?, '绉垎鍟嗗搧7鎶?, '涓撳睘璧勬繁鏍囪瘑']},
-    {'level': 8, 'name': '棣栧腑', 'min_points': 8000, 'benefits': ['姣忔棩绛惧埌+30绉垎', 'VIP鍏戞崲7鎶?, '绉垎鍟嗗搧6鎶?, '涓撳睘棣栧腑鏍囪瘑', '绠＄悊鍚庡彴棰勮鏉冮檺']},
+    {'level': 1, 'name': '入门', 'min_points': 0, 'benefits': ['基础下载权限', '每日签到+10积分']},
+    {'level': 2, 'name': '初级', 'min_points': 100, 'benefits': ['每日签到+12积分', '可下载30积分以下软件']},
+    {'level': 3, 'name': '进阶', 'min_points': 300, 'benefits': ['每日签到+14积分', '可下载50积分以下软件', '积分商品9.5折']},
+    {'level': 4, 'name': '熟练', 'min_points': 600, 'benefits': ['每日签到+16积分', '可下载80积分以下软件', '积分商品9折']},
+    {'level': 5, 'name': '精通', 'min_points': 1000, 'benefits': ['每日签到+18积分', '可下载所有积分软件', '积分商品8.5折']},
+    {'level': 6, 'name': '专家', 'min_points': 2000, 'benefits': ['每日签到+20积分', 'VIP兑换9折', '积分商品8折']},
+    {'level': 7, 'name': '资深', 'min_points': 4000, 'benefits': ['每日签到+25积分', 'VIP兑换8折', '积分商品7折', '专属资深标识']},
+    {'level': 8, 'name': '首席', 'min_points': 8000, 'benefits': ['每日签到+30积分', 'VIP兑换7折', '积分商品6折', '专属首席标识', '管理后台预览权限']},
 ]
 
 
 @api_bp.route('/level/benefits', methods=['GET'])
 def api_level_benefits():
-    """鑾峰彇鎵€鏈夌瓑绾ф潈鐩?""
+    """获取所有等级权益"""
     return jsonify({'success': True, 'data': LEVEL_BENEFITS})
 
 
 @api_bp.route('/user/level/benefits', methods=['GET'])
 @login_required
 def api_user_level_benefits():
-    """鑾峰彇褰撳墠鐢ㄦ埛鐨勭瓑绾ф潈鐩?""
+    """获取当前用户的等级权益"""
     user = query_db('SELECT points FROM users WHERE id = ?', (session['user_id'],), one=True)
     if not user:
-        return jsonify({'success': False, 'message': '鐢ㄦ埛涓嶅瓨鍦?}), 404
+        return jsonify({'success': False, 'message': '用户不存在'}), 404
     level_info = _calc_level(user['points'])
     current_benefits = None
     next_benefits = None
@@ -730,21 +743,21 @@ def api_user_level_benefits():
     })
 
 
-# ==================== 绉垎鍟嗗簵API ====================
+# ==================== 积分商店API ====================
 
 SHOP_ITEMS = [
-    {'id': 1, 'name': '7澶￢IP浣撻獙', 'description': '鑾峰緱7澶￢IP浼氬憳璧勬牸锛屽彲涓嬭浇VIP杞欢', 'price': 200, 'icon': '馃憫', 'type': 'vip_days', 'value': 7},
-    {'id': 2, 'name': '30澶￢IP鐣呬韩', 'description': '鑾峰緱30澶￢IP浼氬憳璧勬牸锛岀晠浜墍鏈塚IP杞欢', 'price': 700, 'icon': '馃憫', 'type': 'vip_days', 'value': 30},
-    {'id': 3, 'name': '涓嬭浇鍒?脳 1', 'description': '鑾峰緱1娆￠澶栦笅杞芥満浼氾紙涓嶅彈姣忔棩闄愬埗锛?, 'price': 20, 'icon': '馃摜', 'type': 'download_ticket', 'value': 1},
-    {'id': 4, 'name': '涓嬭浇鍒?脳 5', 'description': '鑾峰緱5娆￠澶栦笅杞芥満浼?, 'price': 80, 'icon': '馃摜', 'type': 'download_ticket', 'value': 5},
-    {'id': 5, 'name': '绉垎鍙屽€嶅崱锛?澶╋級', 'description': '7澶╁唴绛惧埌鑾峰緱鍙屽€嶇Н鍒?, 'price': 150, 'icon': '鈿?, 'type': 'double_points', 'value': 7},
-    {'id': 6, 'name': '鏀瑰悕鍗?, 'description': '鑾峰緱涓€娆′慨鏀圭敤鎴峰悕鐨勬満浼?, 'price': 100, 'icon': '鉁忥笍', 'type': 'rename_card', 'value': 1},
+    {'id': 1, 'name': '7天VIP体验', 'description': '获得7天VIP会员资格，可下载VIP软件', 'price': 200, 'icon': '👑', 'type': 'vip_days', 'value': 7},
+    {'id': 2, 'name': '30天VIP畅享', 'description': '获得30天VIP会员资格，畅享所有VIP软件', 'price': 700, 'icon': '👑', 'type': 'vip_days', 'value': 30},
+    {'id': 3, 'name': '下载券 × 1', 'description': '获得1次额外下载机会（不受每日限制）', 'price': 20, 'icon': '📥', 'type': 'download_ticket', 'value': 1},
+    {'id': 4, 'name': '下载券 × 5', 'description': '获得5次额外下载机会', 'price': 80, 'icon': '📥', 'type': 'download_ticket', 'value': 5},
+    {'id': 5, 'name': '积分双倍卡（7天）', 'description': '7天内签到获得双倍积分', 'price': 150, 'icon': '⚡', 'type': 'double_points', 'value': 7},
+    {'id': 6, 'name': '改名卡', 'description': '获得一次修改用户名的机会', 'price': 100, 'icon': '✏️', 'type': 'rename_card', 'value': 1},
 ]
 
 
 @api_bp.route('/shop/items', methods=['GET'])
 def api_shop_items():
-    """鑾峰彇绉垎鍟嗗簵鍟嗗搧鍒楄〃"""
+    """获取积分商店商品列表"""
     user_points = 0
     if 'user_id' in session:
         user = query_db('SELECT points FROM users WHERE id = ?', (session['user_id'],), one=True)
@@ -762,12 +775,12 @@ def api_shop_items():
 @api_bp.route('/shop/buy', methods=['POST'])
 @login_required
 def api_shop_buy():
-    """璐拱绉垎鍟嗗簵鍟嗗搧"""
+    """购买积分商店商品"""
     from datetime import datetime, timedelta
     data = request.get_json()
     item_id = data.get('item_id')
     if not item_id:
-        return jsonify({'success': False, 'message': '璇烽€夋嫨鍟嗗搧'}), 400
+        return jsonify({'success': False, 'message': '请选择商品'}), 400
 
     item = None
     for it in SHOP_ITEMS:
@@ -775,30 +788,30 @@ def api_shop_buy():
             item = it
             break
     if not item:
-        return jsonify({'success': False, 'message': '鍟嗗搧涓嶅瓨鍦?}), 404
+        return jsonify({'success': False, 'message': '商品不存在'}), 404
 
     user = query_db('SELECT points, vip_level, vip_expire_time FROM users WHERE id = ?', (session['user_id'],), one=True)
     if not user:
-        return jsonify({'success': False, 'message': '鐢ㄦ埛涓嶅瓨鍦?}), 404
+        return jsonify({'success': False, 'message': '用户不存在'}), 404
 
-    # 璁＄畻鎶樻墸
+    # 计算折扣
     level_info = _calc_level(user['points'])
     discount = 1.0
     for lb in LEVEL_BENEFITS:
         if lb['level'] == level_info['level']:
             for b in lb['benefits']:
-                if '鎶? in b:
+                if '折' in b:
                     try:
-                        discount = int(b.replace('绉垎鍟嗗搧', '').replace('鎶?, '')) / 10
+                        discount = int(b.replace('积分商品', '').replace('折', '')) / 10
                     except:
                         pass
             break
 
     final_price = int(item['price'] * discount)
     if user['points'] < final_price:
-        return jsonify({'success': False, 'message': f'绉垎涓嶈冻锛岄渶瑕亄final_price}绉垎锛堝惈{int((1-discount)*100)}%绛夌骇鎶樻墸锛? if discount < 1 else f'绉垎涓嶈冻锛岄渶瑕亄final_price}绉垎'}), 400
+        return jsonify({'success': False, 'message': f'积分不足，需要{final_price}积分（含{int((1-discount)*100)}%等级折扣）' if discount < 1 else f'积分不足，需要{final_price}积分'}), 400
 
-    # 澶勭悊璐拱
+    # 处理购买
     if item['type'] == 'vip_days':
         now = datetime.now()
         if user['vip_level'] and user['vip_level'] > 0 and user['vip_expire_time']:
@@ -813,14 +826,14 @@ def api_shop_buy():
             'UPDATE users SET points = points - ?, vip_level = CASE WHEN vip_level < 1 THEN 1 ELSE vip_level END, vip_expire_time = ? WHERE id = ?',
             (final_price, new_expire.strftime('%Y-%m-%d %H:%M:%S'), session['user_id'])
         )
-        message = f'璐拱鎴愬姛锛乂IP鏈夋晥鏈熷欢闀胯嚦{new_expire.strftime("%Y-%m-%d")}'
+        message = f'购买成功！VIP有效期延长至{new_expire.strftime("%Y-%m-%d")}'
 
     elif item['type'] == 'download_ticket':
         execute_db(
             'UPDATE users SET points = points - ?, extra_downloads = COALESCE(extra_downloads, 0) + ? WHERE id = ?',
             (final_price, item['value'], session['user_id'])
         )
-        message = f'璐拱鎴愬姛锛佽幏寰梴item["value"]}寮犱笅杞藉埜'
+        message = f'购买成功！获得{item["value"]}张下载券'
 
     elif item['type'] == 'double_points':
         expire_time = (datetime.now() + timedelta(days=item['value'])).strftime('%Y-%m-%d %H:%M:%S')
@@ -828,17 +841,17 @@ def api_shop_buy():
             'UPDATE users SET points = points - ?, double_points_expire = ? WHERE id = ?',
             (final_price, expire_time, session['user_id'])
         )
-        message = f'璐拱鎴愬姛锛亄item["value"]}澶╁唴绛惧埌鑾峰緱鍙屽€嶇Н鍒?
+        message = f'购买成功！{item["value"]}天内签到获得双倍积分'
 
     elif item['type'] == 'rename_card':
         execute_db(
             'UPDATE users SET points = points - ?, rename_available = COALESCE(rename_available, 0) + ? WHERE id = ?',
             (final_price, item['value'], session['user_id'])
         )
-        message = f'璐拱鎴愬姛锛佽幏寰梴item["value"]}娆℃敼鍚嶆満浼?
+        message = f'购买成功！获得{item["value"]}次改名机会'
 
     else:
-        return jsonify({'success': False, 'message': '鍟嗗搧绫诲瀷涓嶆敮鎸?}), 400
+        return jsonify({'success': False, 'message': '商品类型不支持'}), 400
 
     user_new = query_db('SELECT points FROM users WHERE id = ?', (session['user_id'],), one=True)
     return jsonify({
@@ -848,31 +861,31 @@ def api_shop_buy():
     })
 
 
-# ==================== 鏀惰棌API ====================
+# ==================== 收藏API ====================
 
 @api_bp.route('/favorite/toggle/<int:software_id>', methods=['POST'])
 @login_required
 def api_favorite_toggle(software_id):
-    """鍒囨崲鏀惰棌鐘舵€?""
+    """切换收藏状态"""
     existing = query_db(
         'SELECT id FROM user_favorites WHERE user_id = ? AND software_id = ?',
         (session['user_id'], software_id), one=True
     )
     if existing:
         execute_db('DELETE FROM user_favorites WHERE id = ?', (existing['id'],))
-        return jsonify({'success': True, 'message': '宸插彇娑堟敹钘?, 'data': {'favorited': False}})
+        return jsonify({'success': True, 'message': '已取消收藏', 'data': {'favorited': False}})
     else:
         execute_db(
             'INSERT INTO user_favorites (user_id, software_id) VALUES (?, ?)',
             (session['user_id'], software_id)
         )
-        return jsonify({'success': True, 'message': '鏀惰棌鎴愬姛', 'data': {'favorited': True}})
+        return jsonify({'success': True, 'message': '收藏成功', 'data': {'favorited': True}})
 
 
 @api_bp.route('/favorite/list', methods=['GET'])
 @login_required
 def api_favorite_list():
-    """鑾峰彇鏀惰棌鍒楄〃"""
+    """获取收藏列表"""
     favs = query_db(
         'SELECT s.id, s.name, s.version, s.description, s.cover_image, s.platform, '
         's.download_count, s.rating, c.name as category_name, uf.created_at as fav_time '
@@ -886,31 +899,31 @@ def api_favorite_list():
     return jsonify({'success': True, 'data': [dict(row) for row in favs]})
 
 
-# ==================== 鍏虫敞鏇存柊API ====================
+# ==================== 关注更新API ====================
 
 @api_bp.route('/follow/toggle/<int:software_id>', methods=['POST'])
 @login_required
 def api_follow_toggle(software_id):
-    """鍒囨崲鍏虫敞鐘舵€?""
+    """切换关注状态"""
     existing = query_db(
         'SELECT id FROM user_follows WHERE user_id = ? AND software_id = ?',
         (session['user_id'], software_id), one=True
     )
     if existing:
         execute_db('DELETE FROM user_follows WHERE id = ?', (existing['id'],))
-        return jsonify({'success': True, 'message': '宸插彇娑堝叧娉?, 'data': {'followed': False}})
+        return jsonify({'success': True, 'message': '已取消关注', 'data': {'followed': False}})
     else:
         execute_db(
             'INSERT INTO user_follows (user_id, software_id) VALUES (?, ?)',
             (session['user_id'], software_id)
         )
-        return jsonify({'success': True, 'message': '鍏虫敞鎴愬姛锛屾湁鏂扮増鏈皢閫氱煡浣?, 'data': {'followed': True}})
+        return jsonify({'success': True, 'message': '关注成功，有新版本将通知你', 'data': {'followed': True}})
 
 
 @api_bp.route('/follow/list', methods=['GET'])
 @login_required
 def api_follow_list():
-    """鑾峰彇鍏虫敞鍒楄〃"""
+    """获取关注列表"""
     follows = query_db(
         'SELECT s.id, s.name, s.version, s.description, s.cover_image, s.platform, '
         's.download_count, s.updated_at, c.name as category_name, uf.created_at as follow_time '
@@ -927,7 +940,7 @@ def api_follow_list():
 @api_bp.route('/follow/updates', methods=['GET'])
 @login_required
 def api_follow_updates():
-    """鑾峰彇鍏虫敞鐨勮蒋浠舵洿鏂版彁閱?""
+    """获取关注的软件更新提醒"""
     updates = query_db(
         'SELECT s.id, s.name, s.version, s.description, s.updated_at, c.name as category_name '
         'FROM user_follows uf '
@@ -943,7 +956,7 @@ def api_follow_updates():
 @api_bp.route('/software/<int:software_id>/status', methods=['GET'])
 @login_required
 def api_software_user_status(software_id):
-    """鑾峰彇鐢ㄦ埛瀵规煇涓蒋浠剁殑鐘舵€侊紙鏄惁鏀惰棌/鍏虫敞锛?""
+    """获取用户对某个软件的状态（是否收藏/关注）"""
     fav = query_db(
         'SELECT id FROM user_favorites WHERE user_id = ? AND software_id = ?',
         (session['user_id'], software_id), one=True
@@ -961,14 +974,14 @@ def api_software_user_status(software_id):
     })
 
 
-# ==================== 鐗堟湰鏍￠獙API ====================
+# ==================== 版本校验API ====================
 
 @api_bp.route('/check-version')
 def api_check_version():
-    """鏍￠獙App鐗堟湰鏄惁鏈夋晥锛堢敤浜庣増鏈綔搴熸満鍒讹級"""
+    """校验App版本是否有效（用于版本作废机制）"""
     version_code = request.args.get('version', '').strip()
     if not version_code:
-        return jsonify({'valid': False, 'message': '缂哄皯鐗堟湰鍙?})
+        return jsonify({'valid': False, 'message': '缺少版本号'})
 
     version = query_db(
         'SELECT * FROM app_versions WHERE version_code = ?',
@@ -984,25 +997,25 @@ def api_check_version():
     )
     return jsonify({
         'valid': False,
-        'message': '姝ょ増鏈凡琚綔搴燂紝璇蜂笅杞芥渶鏂扮増鏈?,
+        'message': '此版本已被作废，请下载最新版本',
         'latest_version': dict(latest) if latest else None
     })
 
 
-# ==================== 鏁版嵁搴撲慨澶岮PI锛堜竴娆℃€т娇鐢紝鐢ㄥ畬璇峰垹闄わ級 ====================
+# ==================== 数据库修复API（一次性使用，用完请删除） ====================
 
 @api_bp.route('/fix-database', methods=['POST'])
 def api_fix_database():
-    """淇鏁版嵁搴擄細灏?.0.1璁句负鏈夋晥锛?.0.0璁句负浣滃簾"""
+    """修复数据库：将1.0.1设为有效，1.0.0设为作废"""
     data = request.get_json(silent=True) or {}
     token = (data.get('token') or '').strip()
     if token != 'arcane_fix_2024_db':
-        return jsonify({'success': False, 'message': '鏃犳晥浠ょ墝'}), 403
+        return jsonify({'success': False, 'message': '无效令牌'}), 403
 
     db = get_db()
     try:
-        db.execute("INSERT OR IGNORE INTO app_versions (version_code, version_name, is_active) VALUES ('1.0.0', '鍒濆鐗堟湰(宸蹭綔搴?', 0)")
-        db.execute("INSERT OR IGNORE INTO app_versions (version_code, version_name, is_active) VALUES ('1.0.1', '鏈€鏂扮増鏈?, 1)")
+        db.execute("INSERT OR IGNORE INTO app_versions (version_code, version_name, is_active) VALUES ('1.0.0', '初始版本(已作废)', 0)")
+        db.execute("INSERT OR IGNORE INTO app_versions (version_code, version_name, is_active) VALUES ('1.0.1', '最新版本', 1)")
         db.execute("UPDATE app_versions SET is_active = 0 WHERE version_code = '1.0.0'")
         db.execute("UPDATE app_versions SET is_active = 1 WHERE version_code = '1.0.1'")
         db.commit()

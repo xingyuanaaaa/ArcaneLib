@@ -239,52 +239,51 @@ async function getMachineCode() {
 
 (function() {
     'use strict';
-    var _0x = function() {
-        var e = new Error();
-        if (e.stack && (e.stack.includes('console') || e.stack.includes('debugger'))) {
-            document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#08080f;color:#c9a050;font-family:sans-serif;font-size:1.2rem;text-align:center"><div><div style="font-size:3rem;margin-bottom:1rem">&#x26A0;</div><p>安全检测：调试模式已触发</p><p style="font-size:0.8rem;color:#5c5848">请关闭开发者工具后刷新页面</p></div></div>';
-            throw new Error();
-        }
-    };
-    setInterval(_0x, 1000);
-    var _devtoolsOpen = false;
-    var _threshold = 160;
-    var _check = function() {
+
+    // 仅通过 debugger 延迟检测来识别开发者工具
+    // VPN/梯子 不会影响 debugger 执行速度，不会被误判
+    var _checkDevTools = function() {
         var start = performance.now();
         debugger;
         var end = performance.now();
-        if (end - start > _threshold) {
-            _devtoolsOpen = true;
-            document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#08080f;color:#c9a050;font-family:sans-serif;font-size:1.2rem;text-align:center"><div><div style="font-size:3rem;margin-bottom:1rem">&#x26A0;</div><p>安全检测：调试模式已触发</p><p style="font-size:0.8rem;color:#5c5848">请关闭开发者工具后刷新页面</p></div></div>';
-            throw new Error();
+        // debugger > 200ms = 开发者工具打开（抓包/调试）
+        // debugger < 5ms = VPN/梯子/正常，正常运行
+        if (end - start > 200) {
+            _triggerProtection();
         }
     };
-    setInterval(_check, 2000);
-    var _consoleMethods = ['log', 'warn', 'error', 'info', 'debug', 'clear', 'table', 'trace', 'dir', 'group', 'groupEnd', 'time', 'timeEnd'];
-    _consoleMethods.forEach(function(m) {
-        var original = console[m];
-        console[m] = function() {
-            if (_devtoolsOpen) return;
-            if (arguments.length > 0 && typeof arguments[0] === 'string' && (arguments[0].includes('DevTools') || arguments[0].includes('detect'))) return;
-            original.apply(console, arguments);
-        };
-    });
-    Object.defineProperty(window, 'console', { configurable: false, writable: false });
-    Object.defineProperty(navigator, 'webdriver', { get: function() { return false; } });
-    var _img = new Image();
-    Object.defineProperty(_img, 'id', { get: function() { _devtoolsOpen = true; return ''; } });
-    setInterval(function() { console.log(_img); console.clear(); }, 3000);
-    document.addEventListener('contextmenu', function(e) { e.preventDefault(); return false; });
+
+    setInterval(_checkDevTools, 10000);
+
+    // F12 / Ctrl+Shift+I / Ctrl+U 快捷键防护
     document.addEventListener('keydown', function(e) {
-        if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C')) || (e.ctrlKey && e.key === 'U')) {
+        if (e.key === 'F12' ||
+            (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C')) ||
+            (e.ctrlKey && e.key === 'U')) {
             e.preventDefault();
             return false;
         }
     });
-    window.addEventListener('error', function(e) {
-        if (e.message && e.message.includes('debugger')) return;
-        _devtoolsOpen = true;
+
+    // 右键菜单禁用
+    document.addEventListener('contextmenu', function(e) {
+        e.preventDefault();
+        return false;
     });
+
+    // WebDriver 保护
+    Object.defineProperty(navigator, 'webdriver', {
+        get: function() { return false; }
+    });
+
+    // 温和触发保护 - 不销毁页面，只提示
+    function _triggerProtection() {
+        var banner = document.createElement('div');
+        banner.id = '_devWarning';
+        banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#b04a4a;color:#fff;text-align:center;padding:10px 16px;font-size:0.85rem;font-family:sans-serif;display:flex;align-items:center;justify-content:center;gap:12px';
+        banner.innerHTML = '<span>⚠ 检测到开发者工具已打开，请关闭以保证正常使用</span><button onclick="this.parentElement.remove()" style="background:rgba(255,255,255,0.2);border:none;color:#fff;padding:4px 12px;border-radius:4px;cursor:pointer;font-size:0.8rem">知道了</button>';
+        document.body.appendChild(banner);
+    }
 })();
 
 // 页面加载完成

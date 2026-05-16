@@ -1,30 +1,30 @@
 /* ================================================================ */
-/*  Arcane搴?- 濂ユ湳绉樻硶椋庢牸                                          */
-/*  娣遍們铏氱┖ + 鐐奸噾榛勯噾 + 绉樻硶绱櫠 + 鐜荤拑鎷熸€?+ 渚ц竟鏍忓鑸?            */
+/*  Arcane库 - 奥术秘法风格                                          */
+/*  深邃虚空 + 炼金黄金 + 秘法紫晶 + 玻璃拟态 + 侧边栏导航             */
 /* ================================================================ */
 
 @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=Noto+Serif+SC:wght@400;500;700&display=swap');
 
 :root {
-    /* 浜壊涓婚 - 绾噣鐧?*/
+    /* 亮色主题 - 纯净白 */
     --abyss: #f5f5f7;
     --abyss-light: #ffffff;
     --void: #eaeaee;
 
-    /* 鐐奸噾閲戝睘 */
+    /* 炼金金属 */
     --gold: #c9953a;
     --gold-dim: #8a6a2a;
     --gold-bright: #e8c86a;
     --gold-glow: rgba(201, 149, 58, 0.18);
 
-    /* 绉樻硶鑹插僵 */
+    /* 秘法色彩 */
     --arcane-purple: #7c5cf0;
     --arcane-purple-dim: #5b2ea6;
     --arcane-teal: #0ea885;
     --arcane-crimson: #d44a4a;
     --arcane-indigo: #5a4ad0;
 
-    /* 鐜荤拑鎷熸€?- 浜壊 */
+    /* 玻璃拟态 - 亮色 */
     --glass-bg: rgba(255, 255, 255, 0.78);
     --glass-border: rgba(0, 0, 0, 0.07);
     --glass-hover: rgba(0, 0, 0, 0.04);
@@ -34,26 +34,26 @@
     --blur-lg: blur(28px);
     --blur-xl: blur(40px);
 
-    /* 鏂囧瓧 - 浜壊 */
+    /* 文字 - 亮色 */
     --text-primary: #1a1a2e;
     --text-secondary: #555568;
     --text-muted: #8888a0;
     --text-gold: #b8862a;
 
-    /* 鍦嗚 */
+    /* 圆角 */
     --radius-xl: 20px;
     --radius-lg: 14px;
     --radius-md: 10px;
     --radius-sm: 6px;
     --radius-xs: 4px;
 
-    /* 灏哄 */
+    /* 尺寸 */
     --header-h: 50px;
     --bottom-nav-h: 52px;
     --sidebar-w: 260px;
     --safe-b: env(safe-area-inset-bottom, 6px);
 
-    /* 瀛椾綋 - 浣跨敤绯荤粺瀛椾綋鍔犻€熸覆鏌?*/
+    /* 字体 - 使用系统字体加速渲染 */
     --font-display: 'Noto Serif SC', 'PingFang SC', 'Microsoft YaHei', serif;
     --font-body: 'Noto Serif SC', 'PingFang SC', 'Microsoft YaHei', serif;
     --font-ui: 'Noto Serif SC', 'PingFang SC', 'Microsoft YaHei', serif;
@@ -80,7 +80,7 @@ body {
     letter-spacing: 0.01em;
 }
 
-/* 椤甸潰鍏ュ満鍔ㄧ敾 */
+/* 页面入场动画 */
 .page-content {
     padding-top: calc(var(--header-h) + 4px);
     padding-bottom: 4px;
@@ -92,7 +92,7 @@ body {
     to { opacity: 1; transform: translateY(0); }
 }
 
-/* 搴曢儴瀵艰埅鍒囨崲鍔ㄧ敾 */
+/* 底部导航切换动画 */
 .bottom-nav a {
     transition: color 0.2s ease, font-weight 0.2s ease;
 }
@@ -103,12 +103,12 @@ body {
     transform: scale(1.1);
 }
 
-/* View Transition API 鏀寔 */
+/* View Transition API 支持 */
 @view-transition {
     navigation: auto;
 }
 
-/* ==================== 鍔ㄦ€佺幓鐠冭儗鏅?==================== */
+/* ==================== 动态玻璃背景 ==================== */
 body::before {
     content: '';
     position: fixed;
@@ -130,7 +130,7 @@ body::before {
     50% { background-position: 100% 100%; }
 }
 
-/* 濂ユ湳鍑犱綍绾硅矾鍙犲姞 - 鍑忓皯鎬ц兘娑堣€?*/
+/* 奥术几何纹路叠加 - 减少性能消耗 */
 body::after {
     content: '';
     position: fixed;
@@ -149,7 +149,7 @@ body::after {
     100% { background-position: 120px 120px, -160px 160px; }
 }
 
-/* ==================== 椤堕儴瀵艰埅鏍?==================== */
+/* ==================== 顶部导航栏 ==================== */
 .app-header {
     position: fixed;
     top: 0; left: 0; right: 0;
@@ -165,7 +165,7 @@ body::after {
     gap: 10px;
 }
 
-/* 姹夊牎鑿滃崟鎸夐挳 */
+/* 汉堡菜单按钮 */
 .hamburger {
     width: 36px; height: 36px;
     display: flex;
@@ -213,7 +213,7 @@ body::after {
     position: relative;
 }
 .app-header .logo::after {
-    content: '鈼?;
+    content: '◆';
     font-size: 0.35rem;
     position: absolute;
     top: -4px; right: -10px;
@@ -225,7 +225,7 @@ body::after {
     50% { opacity: 1; }
 }
 
-/* 鎼滅储鏍?*/
+/* 搜索栏 */
 .header-search {
     flex: 1; min-width: 0;
 }
@@ -249,7 +249,7 @@ body::after {
     background: rgba(201,160,80,0.04);
 }
 
-/* 澶撮儴鎿嶄綔鎸夐挳 */
+/* 头部操作按钮 */
 .header-actions {
     display: flex; gap: 6px; flex-shrink: 0;
 }
@@ -275,7 +275,7 @@ body::after {
     box-shadow: 0 0 14px var(--gold-glow);
 }
 
-/* ==================== 渚ц竟鏍忛伄缃?==================== */
+/* ==================== 侧边栏遮罩 ==================== */
 .sidebar-overlay {
     position: fixed;
     top: 0; left: 0; right: 0; bottom: 0;
@@ -289,7 +289,7 @@ body::after {
 }
 .sidebar-overlay.active { opacity: 1; visibility: visible; }
 
-/* ==================== 渚ц竟鏍?==================== */
+/* ==================== 侧边栏 ==================== */
 .sidebar {
     position: fixed;
     top: 0; left: 0;
@@ -309,7 +309,7 @@ body::after {
 }
 .sidebar.active { transform: translateX(0); }
 
-/* 渚ц竟鏍忓ご閮?*/
+/* 侧边栏头部 */
 .sidebar-head {
     padding: 18px 20px 14px;
     border-bottom: 1px solid rgba(201,160,80,0.08);
@@ -340,7 +340,7 @@ body::after {
 }
 .sidebar-close:active { border-color: var(--gold); color: var(--gold); }
 
-/* 渚ц竟鏍忕敤鎴峰尯 */
+/* 侧边栏用户区 */
 .sidebar-user {
     padding: 14px 20px;
     border-bottom: 1px solid rgba(201,160,80,0.08);
@@ -368,7 +368,7 @@ body::after {
     margin-top: 1px;
 }
 
-/* 渚ц竟鏍忓鑸」 */
+/* 侧边栏导航项 */
 .sidebar-nav {
     flex: 1;
     padding: 8px 0;
@@ -418,7 +418,7 @@ body::after {
 .sidebar-nav a.active .sn-icon,
 .sidebar-nav .sn-item.active .sn-icon { opacity: 1; }
 
-/* 渚ц竟鏍忓簳閮?*/
+/* 侧边栏底部 */
 .sidebar-footer {
     padding: 12px 20px;
     border-top: 1px solid rgba(201,160,80,0.08);
@@ -428,10 +428,10 @@ body::after {
     letter-spacing: 1px;
 }
 
-/* ==================== 涓诲唴瀹瑰尯 ==================== */
-/* padding-top 宸插湪 body 鐨?.page-content 鍔ㄧ敾涓畾涔?*/
+/* ==================== 主内容区 ==================== */
+/* padding-top 已在 body 的 .page-content 动画中定义 */
 
-/* ==================== 搴曢儴瀵艰埅鏍?==================== */
+/* ==================== 底部导航栏 ==================== */
 .bottom-nav {
     position: fixed;
     bottom: 0; left: 0; right: 0;
@@ -474,7 +474,7 @@ body::after {
     box-shadow: 0 0 10px var(--gold), 0 0 20px var(--gold-glow);
 }
 
-/* ==================== Feed鎺ㄨ崘鍗＄墖 ==================== */
+/* ==================== Feed推荐卡片 ==================== */
 .feed-list {
     display: flex;
     flex-direction: column;
@@ -576,7 +576,7 @@ body::after {
     font-style: italic;
 }
 
-/* ==================== 妯悜婊氬姩鍗＄墖 ==================== */
+/* ==================== 横向滚动卡片 ==================== */
 .h-scroll-section { padding: 12px 12px 4px; }
 .h-scroll-title {
     font-family: var(--font-display);
@@ -590,7 +590,7 @@ body::after {
     gap: 10px;
 }
 .h-scroll-title::before {
-    content: '鈼?;
+    content: '◆';
     font-size: 0.5rem;
     color: var(--gold);
     opacity: 0.7;
@@ -657,7 +657,7 @@ body::after {
     font-style: italic;
 }
 
-/* ==================== 鍒嗙被鏍囩 ==================== */
+/* ==================== 分类标签 ==================== */
 .category-tabs {
     display: flex;
     gap: 7px;
@@ -689,7 +689,7 @@ body::after {
     box-shadow: 0 0 12px var(--gold-glow);
 }
 
-/* ==================== 銆屾垜鐨勩€嶉〉闈?==================== */
+/* ==================== 「我的」页面 ==================== */
 .my-page-header {
     background: linear-gradient(180deg, rgba(124,58,237,0.08), rgba(201,160,80,0.04));
     border-bottom: 1px solid var(--glass-border);
@@ -784,7 +784,7 @@ body::after {
 }
 .my-stat-label { font-size: 0.63rem; color: var(--text-muted); margin-top: 2px; letter-spacing: 1px; }
 
-/* 绛惧埌鍗＄墖 */
+/* 签到卡片 */
 .checkin-card {
     margin: 10px 14px;
     background: rgba(201,160,80,0.03);
@@ -844,7 +844,7 @@ body::after {
     cursor: default;
 }
 
-/* 鎴戠殑鑿滃崟 */
+/* 我的菜单 */
 .my-menu { padding: 0 14px; }
 .my-menu-section {
     margin-bottom: 8px;
@@ -898,7 +898,7 @@ body::after {
 .my-menu-item .menu-val { color: var(--text-muted); font-size: 0.76rem; }
 .my-menu-item .menu-arrow { color: var(--text-muted); font-size: 0.8rem; }
 
-/* ==================== 鎸夐挳 ==================== */
+/* ==================== 按钮 ==================== */
 .btn {
     display: inline-flex;
     align-items: center;
@@ -933,7 +933,7 @@ body::after {
 .btn-lg { padding: 13px 26px; font-size: 0.95rem; }
 .btn-danger { background: rgba(155,44,44,0.12); border: 1px solid rgba(155,44,44,0.3); color: #e88181; }
 
-/* ==================== 琛ㄥ崟 ==================== */
+/* ==================== 表单 ==================== */
 .form-group { margin-bottom: 15px; }
 .form-label {
     display: block;
@@ -964,7 +964,7 @@ body::after {
 .form-input::placeholder { color: var(--text-muted); font-style: italic; }
 .form-textarea { min-height: 85px; resize: vertical; }
 
-/* ==================== Toast娑堟伅 ==================== */
+/* ==================== Toast消息 ==================== */
 .toast-container {
     position: fixed;
     top: calc(var(--header-h) + 6px);
@@ -993,7 +993,7 @@ body::after {
 .toast-info { background: rgba(124,58,237,0.08); border-color: rgba(124,58,237,0.25); color: #a78bfa; }
 @keyframes toastIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
 
-/* ==================== 鍔犺浇/绌虹姸鎬?鍒嗛〉 ==================== */
+/* ==================== 加载/空状态/分页 ==================== */
 .spinner {
     width: 26px; height: 26px;
     border: 2px solid rgba(201,160,80,0.1);
@@ -1026,7 +1026,7 @@ body::after {
     color: var(--gold);
 }
 
-/* ==================== 杞欢璇︽儏 ==================== */
+/* ==================== 软件详情 ==================== */
 .detail-header {
     background: linear-gradient(180deg, rgba(124,58,237,0.04), transparent);
     padding: 18px 16px;
@@ -1066,7 +1066,7 @@ body::after {
     white-space: pre-wrap;
 }
 
-/* ==================== 鏍囩 ==================== */
+/* ==================== 标签 ==================== */
 .badge { display: inline-block; padding: 2px 7px; border-radius: 6px; font-size: 0.62rem; font-weight: 600; letter-spacing: 0.5px; }
 .badge-new { background: rgba(124,58,237,0.1); color: #a78bfa; }
 .badge-hot { background: rgba(155,44,44,0.1); color: #e88181; }
@@ -1083,7 +1083,7 @@ body::after {
     letter-spacing: 1px;
 }
 
-/* ==================== 璁よ瘉椤甸潰 ==================== */
+/* ==================== 认证页面 ==================== */
 .auth-page {
     min-height: 100vh;
     display: flex;
@@ -1119,7 +1119,7 @@ body::after {
     font-style: italic;
 }
 
-/* ==================== 鍏憡 ==================== */
+/* ==================== 公告 ==================== */
 .announcement-item {
     display: flex;
     gap: 10px;
@@ -1157,14 +1157,14 @@ body::after {
 }
 .announcement-item .ann-time { font-size: 0.66rem; color: var(--text-muted); margin-top: 2px; font-style: italic; }
 
-/* ==================== 鍝嶅簲寮?==================== */
+/* ==================== 响应式 ==================== */
 @media (min-width: 768px) {
     .feed-list { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; padding: 8px 16px; }
     .h-scroll-row { gap: 14px; }
     .h-scroll-card { width: 155px; }
 }
 
-/* ==================== 婊氬姩鏉＄編鍖?==================== */
+/* ==================== 滚动条美化 ==================== */
 ::-webkit-scrollbar { width: 4px; height: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: rgba(201,160,80,0.15); border-radius: 2px; }

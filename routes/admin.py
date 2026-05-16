@@ -439,7 +439,7 @@ def announcement_manage():
 @csrf_protect
 def api_announcement_add():
     """添加公告"""
-    data = request.get_json() or {}
+    data = request.get_json(silent=True) or request.form or {}
     title = (data.get('title') or '').strip()
     content = (data.get('content') or '').strip()
     ann_type = data.get('type', 'info')

@@ -1009,8 +1009,19 @@ def api_fix_versions():
     if token != 'arcane_fix_2024':
         return jsonify({'error': 'invalid token'}), 403
 
-    execute_db("UPDATE app_versions SET is_active = 0 WHERE version_code = '1.0.0'")
-    execute_db("UPDATE app_versions SET is_active = 1 WHERE version_code = '1.0.1'")
+    # 确保 1.0.0 和 1.0.1 都存在
+    v1 = query_db("SELECT id FROM app_versions WHERE version_code = '1.0.0'", one=True)
+    v2 = query_db("SELECT id FROM app_versions WHERE version_code = '1.0.1'", one=True)
+
+    if not v1:
+        execute_db("INSERT INTO app_versions (version_code, version_name, is_active) VALUES ('1.0.0', '初始版本', 0)")
+    else:
+        execute_db("UPDATE app_versions SET is_active = 0 WHERE version_code = '1.0.0'")
+
+    if not v2:
+        execute_db("INSERT INTO app_versions (version_code, version_name, is_active) VALUES ('1.0.1', '新版', 1)")
+    else:
+        execute_db("UPDATE app_versions SET is_active = 1 WHERE version_code = '1.0.1'")
 
     v1 = query_db("SELECT version_code, is_active FROM app_versions WHERE version_code = '1.0.0'", one=True)
     v2 = query_db("SELECT version_code, is_active FROM app_versions WHERE version_code = '1.0.1'", one=True)

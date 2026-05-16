@@ -79,12 +79,12 @@ def create_app():
         if banned:
             return jsonify({'success': False, 'message': '访问被拒绝'}), 403
 
-        # 会话IP绑定检查
-        if 'user_id' in session:
-            session_ip = session.get('bound_ip')
-            if session_ip and session_ip != client_ip:
-                session.clear()
-                return redirect(url_for('auth.login_page'))
+        # 会话IP绑定检查（移动网络下IP可能变化，暂不启用）
+        # if 'user_id' in session:
+        #     session_ip = session.get('bound_ip')
+        #     if session_ip and session_ip != client_ip:
+        #         session.clear()
+        #         return redirect(url_for('auth.login_page'))
 
         if 'user_id' in session:
             g.user = query_db('SELECT * FROM users WHERE id = ?', (session['user_id'],), one=True)

@@ -672,3 +672,86 @@ def download_stats():
                            page=page,
                            total_pages=total_pages,
                            top_software=top_software)
+
+
+# ==================== 版本管理 ====================
+
+@admin_bp.route('/versions')
+@admin_required
+def version_management():
+    """版本管理页面"""
+    versions = query_db(
+        'SELECT * FROM app_versions ORDER BY id DESC'
+    )
+    active_count = query_db(
+        'SELECT COUNT(*) as cnt FROM app_versions WHERE is_active = 1', one=True
+    )['cnt']
+    disabled_count = query_db(
+        'SELECT COUNT(*) as cnt FROM app_versions WHERE is_active = 0', one=True
+    )['cnt']
+    total_count = query_db(
+        'SELECT COUNT(*) as cnt FROM app_versions', one=True
+    )['cnt']
+    return render_template('admin/versions.html', versions=versions,
+                           active_count=active_count,
+                           disabled_count=disabled_count,
+                           total_count=total_count)
+
+
+@admin_bp.route('/api/version/add', methods=['POST'])
+@admin_required
+@csrf_protect
+def api_add_version():
+    """添加新版本"""
+    version_code = (request.form.get('version_code') or '').strip()
+    version_name = (request.form.get('version_name') or '').strip()
+    if not version_code:
+        flash('请输入版本号', 'danger')
+        return redirect(url_for('admin.version_management'))
+
+    existing = query_db(
+        'SELECT id FROM app_versions WHERE version_code = ?',
+        (version_code,), one=True
+    )
+    if existing:
+        flash('版本号已存在', 'danger')
+        return redirect(url_for('admin.version_management'))
+
+    execute_db(
+        'INSERT INTO app_versions (version_code, version_name, is_active) VALUES (?, ?, ?)',
+        (version_code, version_name, 1)
+    )
+    flash(f'版本 {version_code} 添加成功', 'success')
+    return redirect(url_for('admin.version_management'))
+
+
+@admin_bp.route('/api/version/toggle/<int:version_id>', methods=['POST'])
+@admin_required
+@csrf_protect
+def api_toggle_version(version_id):
+    """切换版本有效/作废状态"""
+    version = query_db('SELECT * FROM app_versions WHERE id = ?', (version_id,), one=True)
+    if not version:
+        flash('版本不存在', 'danger')
+        return redirect(url_for('admin.version_management'))
+
+    new_status = 0 if version['is_active'] else 1
+    execute_db('UPDATE app_versions SET is_active = ? WHERE id = ?', (new_status, version_id))
+    status_text = '已作废' if new_status == 0 else '已恢复'
+    flash(f'版本 {version["version_code"]} {status_text}', 'success')
+    return redirect(url_for('admin.version_management'))
+
+
+@admin_bp.route('/api/version/delete/<int:version_id>', methods=['POST'])
+@admin_required
+@csrf_protect
+def api_delete_version(version_id):
+    """删除版本记录"""
+    version = query_db('SELECT * FROM app_versions WHERE id = ?', (version_id,), one=True)
+    if not version:
+        flash('版本不存在', 'danger')
+        return redirect(url_for('admin.version_management'))
+
+    execute_db('DELETE FROM app_versions WHERE id = ?', (version_id,))
+    flash(f'版本 {version["version_code"]} 已删除', 'success')
+    return redirect(url_for('admin.version_management'))

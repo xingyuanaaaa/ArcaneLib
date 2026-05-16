@@ -232,6 +232,18 @@ def init_db():
         )
     ''')
 
+    # 应用版本表（用于版本校验/作废机制）
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS app_versions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            version_code TEXT NOT NULL,
+            version_name TEXT,
+            is_active INTEGER DEFAULT 1,
+            created_at TEXT DEFAULT (datetime('now', 'localtime')),
+            UNIQUE(version_code)
+        )
+    ''')
+
     # 签到记录表
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS checkin_logs (
@@ -304,6 +316,16 @@ def init_db():
         cursor.execute(
             'INSERT OR IGNORE INTO system_config (config_key, config_value, description) VALUES (?, ?, ?)',
             cfg
+        )
+
+    # 插入默认应用版本
+    default_versions = [
+        ('1.0.0', '初始版本', 1),
+    ]
+    for ver in default_versions:
+        cursor.execute(
+            'INSERT OR IGNORE INTO app_versions (version_code, version_name, is_active) VALUES (?, ?, ?)',
+            ver
         )
 
     conn.commit()

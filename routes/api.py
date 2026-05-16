@@ -972,3 +972,31 @@ def api_software_user_status(software_id):
             'followed': follow is not None
         }
     })
+
+
+# ==================== 版本校验API ====================
+
+@api_bp.route('/check-version')
+def api_check_version():
+    """校验App版本是否有效（用于版本作废机制）"""
+    version_code = request.args.get('version', '').strip()
+    if not version_code:
+        return jsonify({'valid': False, 'message': '缺少版本号'})
+
+    version = query_db(
+        'SELECT * FROM app_versions WHERE version_code = ?',
+        (version_code,), one=True
+    )
+
+    if version and version['is_active']:
+        return jsonify({'valid': True})
+
+    latest = query_db(
+        'SELECT version_code, version_name FROM app_versions WHERE is_active = 1 ORDER BY id DESC LIMIT 1',
+        one=True
+    )
+    return jsonify({
+        'valid': False,
+        'message': '此版本已被作废，请下载最新版本',
+        'latest_version': dict(latest) if latest else None
+    })

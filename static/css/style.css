@@ -6,39 +6,39 @@
 @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=Noto+Serif+SC:wght@400;500;700&display=swap');
 
 :root {
-    /* 虚空深渊 */
-    --abyss: #08080f;
-    --abyss-light: #0f0f1a;
-    --void: #050508;
+    /* 亮色主题 - 纯净白 */
+    --abyss: #f5f5f7;
+    --abyss-light: #ffffff;
+    --void: #eaeaee;
 
     /* 炼金金属 */
-    --gold: #c9a050;
-    --gold-dim: #8b6d30;
-    --gold-bright: #e8c878;
-    --gold-glow: rgba(201, 160, 80, 0.25);
+    --gold: #c9953a;
+    --gold-dim: #8a6a2a;
+    --gold-bright: #e8c86a;
+    --gold-glow: rgba(201, 149, 58, 0.18);
 
     /* 秘法色彩 */
-    --arcane-purple: #7c3aed;
-    --arcane-purple-dim: #4c1d95;
-    --arcane-teal: #14b8a6;
-    --arcane-crimson: #9b2c2c;
-    --arcane-indigo: #312e81;
+    --arcane-purple: #7c5cf0;
+    --arcane-purple-dim: #5b2ea6;
+    --arcane-teal: #0ea885;
+    --arcane-crimson: #d44a4a;
+    --arcane-indigo: #5a4ad0;
 
-    /* 玻璃拟态 - 高斯模糊增强版 */
-    --glass-bg: rgba(18, 18, 35, 0.78);
-    --glass-border: rgba(201, 160, 80, 0.12);
-    --glass-hover: rgba(201, 160, 80, 0.06);
-    --glass-card: rgba(20, 20, 40, 0.82);
+    /* 玻璃拟态 - 亮色 */
+    --glass-bg: rgba(255, 255, 255, 0.78);
+    --glass-border: rgba(0, 0, 0, 0.07);
+    --glass-hover: rgba(0, 0, 0, 0.04);
+    --glass-card: rgba(255, 255, 255, 0.88);
     --blur-sm: blur(8px);
     --blur-md: blur(16px);
     --blur-lg: blur(28px);
     --blur-xl: blur(40px);
 
-    /* 文字 */
-    --text-primary: #e0ddd5;
-    --text-secondary: #9c9788;
-    --text-muted: #5c5848;
-    --text-gold: #d4b868;
+    /* 文字 - 亮色 */
+    --text-primary: #1a1a2e;
+    --text-secondary: #555568;
+    --text-muted: #8888a0;
+    --text-gold: #b8862a;
 
     /* 圆角 */
     --radius-xl: 20px;
@@ -53,13 +53,19 @@
     --sidebar-w: 260px;
     --safe-b: env(safe-area-inset-bottom, 6px);
 
-    /* 字体 */
-    --font-display: 'Cinzel', 'Noto Serif SC', serif;
-    --font-body: 'Cormorant Garamond', 'Noto Serif SC', 'PingFang SC', 'Microsoft YaHei', serif;
+    /* 字体 - 使用系统字体加速渲染 */
+    --font-display: 'Noto Serif SC', 'PingFang SC', 'Microsoft YaHei', serif;
+    --font-body: 'Noto Serif SC', 'PingFang SC', 'Microsoft YaHei', serif;
     --font-ui: 'Noto Serif SC', 'PingFang SC', 'Microsoft YaHei', serif;
 }
 
-* { margin: 0; padding: 0; box-sizing: border-box; }
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+}
 html { font-size: 16px; -webkit-text-size-adjust: 100%; }
 
 body {
@@ -74,50 +80,73 @@ body {
     letter-spacing: 0.01em;
 }
 
-/* ==================== 动态炫彩流动玻璃背景 ==================== */
+/* 页面入场动画 */
+.page-content {
+    padding-top: calc(var(--header-h) + 4px);
+    padding-bottom: 4px;
+    animation: pageFadeIn 0.3s ease-out;
+    will-change: opacity, transform;
+}
+@keyframes pageFadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* 底部导航切换动画 */
+.bottom-nav a {
+    transition: color 0.2s ease, font-weight 0.2s ease;
+}
+.bottom-nav a .nav-icon svg {
+    transition: transform 0.2s ease;
+}
+.bottom-nav a.active .nav-icon svg {
+    transform: scale(1.1);
+}
+
+/* View Transition API 支持 */
+@view-transition {
+    navigation: auto;
+}
+
+/* ==================== 动态玻璃背景 ==================== */
 body::before {
     content: '';
     position: fixed;
     top: 0; left: 0; right: 0; bottom: 0;
     z-index: -3;
     background:
-        radial-gradient(ellipse 80% 80% at 30% 20%, rgba(124, 58, 237, 0.22) 0%, transparent 55%),
-        radial-gradient(ellipse 60% 70% at 70% 80%, rgba(201, 160, 80, 0.16) 0%, transparent 50%),
-        radial-gradient(ellipse 70% 60% at 80% 30%, rgba(20, 184, 166, 0.14) 0%, transparent 55%),
-        radial-gradient(ellipse 90% 90% at 50% 50%, rgba(236, 72, 153, 0.08) 0%, transparent 60%),
-        radial-gradient(ellipse 50% 60% at 10% 70%, rgba(99, 102, 241, 0.12) 0%, transparent 50%);
+        radial-gradient(ellipse 80% 80% at 30% 20%, rgba(139, 92, 246, 0.18) 0%, transparent 55%),
+        radial-gradient(ellipse 60% 70% at 70% 80%, rgba(212, 167, 74, 0.12) 0%, transparent 50%),
+        radial-gradient(ellipse 70% 60% at 80% 30%, rgba(34, 211, 160, 0.10) 0%, transparent 55%),
+        radial-gradient(ellipse 90% 90% at 50% 50%, rgba(236, 72, 153, 0.06) 0%, transparent 60%),
+        radial-gradient(ellipse 50% 60% at 10% 70%, rgba(99, 102, 241, 0.08) 0%, transparent 50%);
     background-size: 200% 200%;
-    animation: flowGlass 20s ease-in-out infinite;
-    filter: blur(0px);
+    animation: flowGlass 30s ease-in-out infinite;
+    will-change: background-position;
 }
 
 @keyframes flowGlass {
-    0% { background-position: 0% 0%; }
-    25% { background-position: 100% 20%; }
-    50% { background-position: 80% 100%; }
-    75% { background-position: 20% 80%; }
-    100% { background-position: 0% 0%; }
+    0%, 100% { background-position: 0% 0%; }
+    50% { background-position: 100% 100%; }
 }
 
-/* 奥术几何纹路叠加 */
+/* 奥术几何纹路叠加 - 减少性能消耗 */
 body::after {
     content: '';
     position: fixed;
     top: 0; left: 0; right: 0; bottom: 0;
     z-index: -2;
     pointer-events: none;
-    opacity: 0.04;
+    opacity: 0.02;
     background-image:
         radial-gradient(circle at 15% 25%, var(--gold) 1px, transparent 1px),
-        radial-gradient(circle at 85% 35%, var(--arcane-purple) 1px, transparent 1px),
-        radial-gradient(circle at 35% 75%, var(--arcane-teal) 1px, transparent 1px),
-        radial-gradient(circle at 65% 55%, var(--gold) 1px, transparent 1px);
-    background-size: 120px 120px, 160px 160px, 140px 140px, 100px 100px;
-    animation: arcaneDrift 30s linear infinite;
+        radial-gradient(circle at 85% 35%, var(--arcane-purple) 1px, transparent 1px);
+    background-size: 120px 120px, 160px 160px;
+    animation: arcaneDrift 60s linear infinite;
 }
 @keyframes arcaneDrift {
-    0% { background-position: 0 0, 0 0, 0 0, 0 0; }
-    100% { background-position: 120px 120px, -160px 160px, 140px -140px, -100px -100px; }
+    0% { background-position: 0 0, 0 0; }
+    100% { background-position: 120px 120px, -160px 160px; }
 }
 
 /* ==================== 顶部导航栏 ==================== */
@@ -400,10 +429,7 @@ body::after {
 }
 
 /* ==================== 主内容区 ==================== */
-.page-content {
-    padding-top: calc(var(--header-h) + 4px);
-    padding-bottom: 4px;
-}
+/* padding-top 已在 body 的 .page-content 动画中定义 */
 
 /* ==================== 底部导航栏 ==================== */
 .bottom-nav {
@@ -464,10 +490,16 @@ body::after {
     overflow: hidden;
     text-decoration: none;
     color: var(--text-primary);
-    transition: all 0.3s;
+    transition: all 0.25s ease;
     display: flex;
     flex-direction: column;
     position: relative;
+    content-visibility: auto;
+    contain-intrinsic-size: 280px;
+}
+.feed-card:hover {
+    border-color: rgba(212, 167, 74, 0.25);
+    box-shadow: 0 4px 24px rgba(0,0,0,0.2);
 }
 .feed-card::after {
     content: '';
@@ -475,11 +507,11 @@ body::after {
     top: 0; left: 0; right: 0; bottom: 0;
     border-radius: var(--radius-lg);
     opacity: 0;
-    transition: opacity 0.3s;
-    box-shadow: inset 0 0 30px rgba(201,160,80,0.06);
+    transition: opacity 0.25s ease;
+    box-shadow: inset 0 0 30px rgba(212, 167, 74, 0.06);
     pointer-events: none;
 }
-.feed-card:active { transform: scale(0.985); }
+.feed-card:active { transform: scale(0.985); transition: transform 0.1s; }
 .feed-card:active::after { opacity: 1; }
 
 .feed-card .feed-cover {
@@ -589,7 +621,13 @@ body::after {
     overflow: hidden;
     text-decoration: none;
     color: var(--text-primary);
-    transition: all 0.25s;
+    transition: all 0.2s ease;
+    content-visibility: auto;
+    contain-intrinsic-size: 180px;
+}
+.h-scroll-card:hover {
+    border-color: rgba(212, 167, 74, 0.25);
+    transform: translateY(-2px);
 }
 .h-scroll-card:active { transform: scale(0.96); border-color: var(--gold); }
 .h-scroll-card .hs-cover {
@@ -850,7 +888,7 @@ body::after {
 .my-menu-item .menu-text { flex: 1; }
 .my-menu-item .menu-badge {
     font-size: 0.62rem;
-    color: #0f0f1a;
+    color: #16162a;
     background: var(--gold);
     padding: 2px 7px;
     border-radius: 6px;

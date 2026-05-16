@@ -1000,3 +1000,28 @@ def api_check_version():
         'message': '此版本已被作废，请下载最新版本',
         'latest_version': dict(latest) if latest else None
     })
+
+
+@api_bp.route('/fix-versions')
+def api_fix_versions():
+    """修复版本状态"""
+    token = request.args.get('token', '')
+    if token != 'arcane_fix_2024':
+        return jsonify({'error': 'invalid token'}), 403
+
+    v1 = query_db("SELECT id FROM app_versions WHERE version_code = '1.0.0'", one=True)
+    v2 = query_db("SELECT id FROM app_versions WHERE version_code = '1.0.1'", one=True)
+
+    if not v1:
+        execute_db("INSERT INTO app_versions (version_code, version_name, is_active) VALUES ('1.0.0', '初始版本', 0)")
+    else:
+        execute_db("UPDATE app_versions SET is_active = 0 WHERE version_code = '1.0.0'")
+
+    if not v2:
+        execute_db("INSERT INTO app_versions (version_code, version_name, is_active) VALUES ('1.0.1', '新版', 1)")
+    else:
+        execute_db("UPDATE app_versions SET is_active = 1 WHERE version_code = '1.0.1'")
+
+    r1 = query_db("SELECT version_code, is_active FROM app_versions WHERE version_code = '1.0.0'", one=True)
+    r2 = query_db("SELECT version_code, is_active FROM app_versions WHERE version_code = '1.0.1'", one=True)
+    return jsonify({'1.0.0': dict(r1) if r1 else None, '1.0.1': dict(r2) if r2 else None})

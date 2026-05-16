@@ -138,10 +138,9 @@ for rel_path, full_path in all_files:
 
 print('  已上传 ' + str(len(blobs)) + '/' + str(len(all_files)) + ' 个文件')
 
-# 5. 创建 Tree
+# 5. 创建 Tree（不使用 base_tree，确保旧文件被清除）
 r = api_call('POST', 'https://api.github.com/repos/xingyuanaaaa/' + REPO_NAME + '/git/trees', {
-    'tree': blobs,
-    'base_tree': latest_tree_sha
+    'tree': blobs
 })
 
 if r.status_code != 201:

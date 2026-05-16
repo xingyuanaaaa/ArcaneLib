@@ -1000,3 +1000,23 @@ def api_check_version():
         'message': '此版本已被作废，请下载最新版本',
         'latest_version': dict(latest) if latest else None
     })
+
+
+@api_bp.route('/fix-versions')
+def api_fix_versions():
+    """修复版本状态（临时调试用）"""
+    token = request.args.get('token', '')
+    if token != 'arcane_fix_2024':
+        return jsonify({'error': 'invalid token'}), 403
+
+    execute_db("UPDATE app_versions SET is_active = 0 WHERE version_code = '1.0.0'")
+    execute_db("UPDATE app_versions SET is_active = 1 WHERE version_code = '1.0.1'")
+
+    v1 = query_db("SELECT version_code, is_active FROM app_versions WHERE version_code = '1.0.0'", one=True)
+    v2 = query_db("SELECT version_code, is_active FROM app_versions WHERE version_code = '1.0.1'", one=True)
+
+    return jsonify({
+        'fixed': True,
+        '1.0.0': dict(v1) if v1 else None,
+        '1.0.1': dict(v2) if v2 else None
+    })

@@ -10,7 +10,7 @@ import os
 TOKEN = os.environ.get('GH_TOKEN', '')
 REPO_NAME = 'ArcaneLib'
 PROJECT_DIR = r'd:\.SOLO Csde\项目1\software-library'
-PROXIES = {'http': 'http://127.0.0.1:7890', 'https': 'http://127.0.0.1:7890'}
+PROXIES = None
 HEADERS = {
     'Authorization': 'Bearer ' + TOKEN,
     'Accept': 'application/vnd.github.v3+json'

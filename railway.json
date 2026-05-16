@@ -1,8 +1,0 @@
-{
-  "build": {
-    "builder": "DOCKER"
-  },
-  "deploy": {
-    "restartPolicyType": "ON_FAILURE"
-  }
-}

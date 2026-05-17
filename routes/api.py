@@ -751,7 +751,7 @@ SHOP_ITEMS = [
     {'id': 3, 'name': '下载券 × 1', 'description': '获得1次额外下载机会（不受每日限制）', 'price': 20, 'icon': '📥', 'type': 'download_ticket', 'value': 1},
     {'id': 4, 'name': '下载券 × 5', 'description': '获得5次额外下载机会', 'price': 80, 'icon': '📥', 'type': 'download_ticket', 'value': 5},
     {'id': 5, 'name': '积分双倍卡（7天）', 'description': '7天内签到获得双倍积分', 'price': 150, 'icon': '⚡', 'type': 'double_points', 'value': 7},
-    {'id': 6, 'name': '改名卡', 'description': '获得一次修改用户名的机会', 'price': 100, 'icon': '✏️', 'type': 'rename_card', 'value': 1},
+   {'id': 6, 'name': '改名卡', 'description': '获得一次修改用户名的机会', 'price': 100, 'icon': '✏️', 'type': 'rename_card', 'value': 1},
 ]
 
 
@@ -1000,31 +1000,3 @@ def api_check_version():
         'message': '此版本已被作废，请下载最新版本',
         'latest_version': dict(latest) if latest else None
     })
-
-
-# ==================== 数据库修复API（一次性使用，用完请删除） ====================
-
-@api_bp.route('/fix-database', methods=['POST'])
-def api_fix_database():
-    """修复数据库：将1.0.1设为有效，1.0.0设为作废"""
-    data = request.get_json(silent=True) or {}
-    token = (data.get('token') or '').strip()
-    if token != 'arcane_fix_2024_db':
-        return jsonify({'success': False, 'message': '无效令牌'}), 403
-
-    db = get_db()
-    try:
-        db.execute("INSERT OR IGNORE INTO app_versions (version_code, version_name, is_active) VALUES ('1.0.0', '初始版本(已作废)', 0)")
-        db.execute("INSERT OR IGNORE INTO app_versions (version_code, version_name, is_active) VALUES ('1.0.1', '最新版本', 1)")
-        db.execute("UPDATE app_versions SET is_active = 0 WHERE version_code = '1.0.0'")
-        db.execute("UPDATE app_versions SET is_active = 1 WHERE version_code = '1.0.1'")
-        db.commit()
-
-        rows = db.execute("SELECT version_code, is_active FROM app_versions").fetchall()
-        result = {r['version_code']: r['is_active'] for r in rows}
-        return jsonify({'success': True, 'data': result})
-    except Exception as e:
-        db.rollback()
-        return jsonify({'success': False, 'message': str(e)}), 500
-    finally:
-        db.close()

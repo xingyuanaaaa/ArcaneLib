@@ -1,12 +1,14 @@
 # -*- coding: utf-8 -*-
 # GitHub 仓库创建 + 代码上传脚本
 
-import requests
 import os
 import json
 import base64
+import requests
 
-import os
+os.environ['NO_PROXY'] = 'api.github.com,github.com'
+os.environ['no_proxy'] = 'api.github.com,github.com'
+
 TOKEN = os.environ.get('GH_TOKEN', '')
 REPO_NAME = 'ArcaneLib'
 PROJECT_DIR = r'd:\.SOLO Csde\项目1\software-library'

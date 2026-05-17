@@ -34,6 +34,9 @@ def create_app():
     app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
     app.config['SESSION_COOKIE_HTTPONLY'] = True
     app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+    app.config['SESSION_COOKIE_SECURE'] = True
+    app.config['SESSION_COOKIE_DOMAIN'] = False
+    app.config['PERMANENT_SESSION_LIFETIME'] = 86400 * 30
     app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
 
     # 初始化数据库
@@ -96,18 +99,6 @@ def create_app():
         if 'csrf_token' not in session:
             session['csrf_token'] = secrets.token_hex(32)
 
-        # 频率检测：1分钟内超过60次请求自动封IP
-        if not request.path.startswith('/static/'):
-            recent_count = query_db(
-                "SELECT COUNT(*) as cnt FROM access_logs WHERE ip_address = ? AND created_at > datetime('now', 'localtime', '-60 seconds')",
-                (client_ip,), one=True
-            )
-            if recent_count and recent_count['cnt'] > 60:
-                execute_db(
-                    "INSERT OR IGNORE INTO ip_blacklist (ip_address, reason, expires_at) VALUES (?, ?, datetime('now', 'localtime', '+1 hour'))",
-                    (client_ip, '请求频率过高')
-                )
-
         # 记录访问日志
         if not request.path.startswith('/static/'):
             try:
@@ -132,7 +123,7 @@ def create_app():
             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
             "font-src 'self' https://fonts.gstatic.com https://fonts.googleapis.com; "
             "img-src 'self' data: https: blob:; "
-            "connect-src 'self' http://127.0.0.1:* http://192.168.*:*; "
+            "connect-src 'self' https: http:; "
             "frame-ancestors 'none'; "
             "base-uri 'self'; "
             "form-action 'self'"
